@@ -2,15 +2,21 @@ import React from 'react';
 
 const PageHeader = ({ title, subtitle, action, breadcrumb }) => {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
       <div>
         {breadcrumb && (
-          <div className="flex items-center space-x-1.5 text-[11px] font-medium text-indigo-400 mb-1 tracking-wide">
+          <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-semibold text-indigo-400 mb-2 tracking-wide">
             <span>{breadcrumb}</span>
           </div>
         )}
-        <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">{title}</h1>
-        {subtitle && <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">{subtitle}</p>}
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-3xl leading-relaxed font-normal">
+            {subtitle}
+          </p>
+        )}
       </div>
       {action && <div className="flex items-center space-x-2.5 shrink-0">{action}</div>}
     </div>

@@ -19,6 +19,7 @@ const QuestionPaperReviews = () => {
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [rejectionComments, setRejectionComments] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [processingPaperId, setProcessingPaperId] = useState(null);
 
   const { showToast } = useToast();
 
@@ -41,10 +42,11 @@ const QuestionPaperReviews = () => {
   };
 
   const handleApprove = async (paper) => {
-    if (!window.confirm(`Are you sure you want to approve "${paper.paperTitle}"?`)) return;
+    if (!paper || !paper._id) return;
 
     try {
       setProcessing(true);
+      setProcessingPaperId(paper._id);
       const res = await api.post(`/question-papers/${paper._id}/review`, {
         action: 'APPROVE',
         comments: 'Approved by Examination Controller. Ready for examination conduct.'
@@ -52,6 +54,9 @@ const QuestionPaperReviews = () => {
 
       if (res.data.success) {
         showToast('Question paper officially approved!', 'success');
+        setPapers((prev) =>
+          prev.map((p) => (p._id === paper._id ? { ...p, status: 'APPROVED' } : p))
+        );
         fetchPapers();
         setPreviewPaper(null);
       }
@@ -59,6 +64,7 @@ const QuestionPaperReviews = () => {
       showToast(err.response?.data?.message || 'Error approving paper', 'error');
     } finally {
       setProcessing(false);
+      setProcessingPaperId(null);
     }
   };
 
@@ -149,7 +155,7 @@ const QuestionPaperReviews = () => {
                       size="sm"
                       variant="success"
                       icon={CheckCircle2}
-                      loading={processing}
+                      loading={processing && processingPaperId === paper._id}
                       onClick={() => handleApprove(paper)}
                     >
                       Approve
@@ -265,7 +271,7 @@ const QuestionPaperReviews = () => {
                 <Button
                   variant="success"
                   icon={CheckCircle2}
-                  loading={processing}
+                  loading={processing && processingPaperId === previewPaper._id}
                   onClick={() => handleApprove(previewPaper)}
                 >
                   Approve Paper

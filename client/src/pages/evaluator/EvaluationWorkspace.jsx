@@ -74,11 +74,14 @@ const EvaluationWorkspace = () => {
 
         setCopy(copyData);
 
-        // Locked Evaluation Mode from Examination
-        const examMode = copyData.examination?.evaluationMode || copyData.evaluationMode || 'MANUAL';
-        const normalizedMode = ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(examMode) ? 'AI_EVALUATION' : 'MANUAL';
+        // STRICT EVALUATION MODE DETERMINATION:
+        // When Admin selects "Manual Check" or assigns the copy to an Evaluator, or user is an Evaluator:
+        // This is 100% HUMAN / MANUAL EVALUATION!
+        // No AI evaluation should happen. No Gemini calls. No AI suggestions.
+        const isManual = user?.role === 'EVALUATOR' || !!copyData.assignedEvaluator || copyData.evaluationMode === 'MANUAL';
+        const normalizedMode = isManual ? 'MANUAL' : (['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(copyData.evaluationMode) ? 'AI_EVALUATION' : 'MANUAL');
         setEvalMode(normalizedMode);
-        setIsModeLocked(!!copyData.examination?.evaluationModeLocked);
+        setIsModeLocked(true);
 
         // Initialize evaluations map
         const initialMap = {};
@@ -90,37 +93,46 @@ const EvaluationWorkspace = () => {
             (qe) => (qe.question?._id || qe.question) === qId || qe.questionNumber === ansItem.questionNumber
           );
 
-          const aiScore = ansItem.aiMarks ?? prevQ?.aiMarks ?? prevQ?.aiSuggestedMarks ?? ansItem.aiSuggestedMarks ?? null;
-          const finalScore = ansItem.finalMarks ?? prevQ?.finalMarks ?? (aiScore !== null ? aiScore : (prevQ ? prevQ.marksAwarded : (ansItem.marksAwarded ?? 0)));
+          if (isManual) {
+            // MANUAL EVALUATION: strictly human evaluator marks. No AI marks or feedback!
+            const manualScore = prevQ?.marksAwarded ?? ansItem.marksAwarded ?? (ansItem.finalMarks ?? 0);
+            initialMap[qId] = {
+              questionId: qId,
+              questionNumber: ansItem.questionNumber,
+              maxMarks: maxM,
+              aiMarks: null,
+              finalMarks: manualScore,
+              marksAwarded: manualScore,
+              comments: prevQ ? prevQ.comments : (ansItem.evaluatorRemarks || ''),
+              aiSuggestedMarks: null,
+              aiFeedback: '',
+              wasAiAccepted: false,
+              criteriaBreakdown: prevQ?.criteriaBreakdown || []
+            };
+          } else {
+            // AI MODE (Admin Review):
+            const aiScore = ansItem.aiMarks ?? prevQ?.aiMarks ?? prevQ?.aiSuggestedMarks ?? ansItem.aiSuggestedMarks ?? null;
+            const finalScore = ansItem.finalMarks ?? prevQ?.finalMarks ?? (aiScore !== null ? aiScore : (prevQ ? prevQ.marksAwarded : (ansItem.marksAwarded ?? 0)));
 
-          initialMap[qId] = {
-            questionId: qId,
-            questionNumber: ansItem.questionNumber,
-            maxMarks: maxM,
-            aiMarks: aiScore,
-            finalMarks: finalScore,
-            marksAwarded: finalScore,
-            comments: prevQ ? prevQ.comments : (ansItem.evaluatorRemarks || ''),
-            aiSuggestedMarks: aiScore,
-            aiFeedback: ansItem.aiFeedback || prevQ?.aiFeedback || ansItem.aiAnalysis || '',
-            wasAiAccepted: prevQ ? prevQ.wasAiAccepted : ansItem.isAiApproved,
-            criteriaBreakdown: prevQ?.criteriaBreakdown || []
-          };
+            initialMap[qId] = {
+              questionId: qId,
+              questionNumber: ansItem.questionNumber,
+              maxMarks: maxM,
+              aiMarks: aiScore,
+              finalMarks: finalScore,
+              marksAwarded: finalScore,
+              comments: prevQ ? prevQ.comments : (ansItem.evaluatorRemarks || ''),
+              aiSuggestedMarks: aiScore,
+              aiFeedback: ansItem.aiFeedback || prevQ?.aiFeedback || ansItem.aiAnalysis || '',
+              wasAiAccepted: prevQ ? prevQ.wasAiAccepted : ansItem.isAiApproved,
+              criteriaBreakdown: prevQ?.criteriaBreakdown || []
+            };
+          }
         }
 
         setEvaluations(initialMap);
         if (existingEval?.overallComments) {
           setOverallComments(existingEval.overallComments);
-        }
-
-        // In AI mode, if some questions have no AI suggestions yet, automatically trigger analysis
-        if (normalizedMode === 'AI_EVALUATION') {
-          for (const ansItem of copyData.answers || []) {
-            const qId = ansItem.question?._id || ansItem.question;
-            if (initialMap[qId]?.aiMarks === null && initialMap[qId]?.aiSuggestedMarks === null) {
-              triggerAiEvaluation(copyData._id, ansItem);
-            }
-          }
         }
       }
     } catch (err) {
@@ -518,7 +530,7 @@ const EvaluationWorkspace = () => {
                   Save Draft
                 </Button>
                 <Button variant="primary" size="md" icon={CheckCircle2} loading={submittingFinal} onClick={handleSubmitFinal}>
-                  Finalize
+                  Submit Evaluation
                 </Button>
               </>
             ) : (
@@ -958,14 +970,14 @@ const EvaluationWorkspace = () => {
                   )}
 
                   {/* ============================================================== */}
-                  {/* WORKFLOW BRANCH B: MANUAL EVALUATION MODE (Section 7)          */}
+                  {/* WORKFLOW BRANCH B: MANUAL EVALUATION MODE                      */}
                   {/* Evaluator enters question-wise marks and remarks.              */}
                   {/* ============================================================== */}
                   {evalMode === 'MANUAL' && (
                     <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center space-x-2">
                         <label className="text-xs font-semibold text-slate-200 shrink-0">
-                          Q{ansItem.questionNumber || idx + 1} Marks Awarded:
+                          Question {ansItem.questionNumber || idx + 1} Marks Given:
                         </label>
                         <input
                           type="number"
@@ -974,7 +986,7 @@ const EvaluationWorkspace = () => {
                           step="0.5"
                           value={qEval.marksAwarded ?? 0}
                           onChange={(e) => handleManualMarkChange(qId, e.target.value, ansItem.maxMarks)}
-                          className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-emerald-400 font-mono font-bold text-center focus:outline-none focus:border-indigo-500"
+                          className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-emerald-400 font-mono font-bold text-center focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                         />
                         <span className="text-xs text-slate-400 font-mono">/ {ansItem.maxMarks}</span>
                       </div>
@@ -1029,7 +1041,7 @@ const EvaluationWorkspace = () => {
                   </div>
                 ) : (
                   <div>
-                    Final Calculated Score:{' '}
+                    Total Score Given:{' '}
                     <strong className="text-emerald-400 font-mono text-base font-bold ml-1">
                       {totalAwarded} / {totalMax} marks ({runningPercentage}%)
                     </strong>
@@ -1060,13 +1072,13 @@ const EvaluationWorkspace = () => {
                       loading={submittingFinal}
                       onClick={handleSubmitFinal}
                     >
-                      Finalize & Submit Evaluation
+                      Submit Evaluation
                     </Button>
                   </>
                 ) : (
                   <div className="flex items-center space-x-1.5 text-xs text-emerald-400 font-bold">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Evaluation Finalized & Locked</span>
+                    <span>Evaluation Finalized</span>
                   </div>
                 )}
               </div>

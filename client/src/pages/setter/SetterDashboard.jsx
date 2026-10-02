@@ -193,8 +193,8 @@ const SetterDashboard = () => {
             <span>Step 3</span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h4 className="text-xs font-semibold text-slate-100">Syllabus & Blueprint</h4>
-          <p className="text-[11px] text-slate-400 mt-1">Define units, topics, and marks distribution.</p>
+          <h4 className="text-xs font-semibold text-slate-100">Syllabus & Paper Scheme</h4>
+          <p className="text-[11px] text-slate-400 mt-1">Define units, paper scheme, and marks distribution.</p>
         </Link>
 
         <Link
@@ -269,7 +269,7 @@ const SetterDashboard = () => {
 
                 <Link to={`/setter/syllabus/${exam._id}`}>
                   <Button size="sm" variant="outline">
-                    Syllabus & Blueprint
+                    Syllabus & Paper Scheme
                   </Button>
                 </Link>
 

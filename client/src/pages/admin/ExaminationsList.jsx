@@ -8,7 +8,21 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../context/ToastContext';
-import { Plus, Search, Calendar, UserCheck, Settings, CheckCircle2, XCircle, Scan } from 'lucide-react';
+import { Plus, Search, Calendar, UserCheck, Settings, CheckCircle2, XCircle, Scan, Edit3, Trash2 } from 'lucide-react';
+
+const initialFormData = {
+  name: '',
+  code: '',
+  session: '2025-2026',
+  course: 'B.Tech',
+  semester: 6,
+  subject: '',
+  durationMinutes: 120,
+  maxMarks: 50,
+  passingMarks: 20,
+  description: '',
+  instructions: 'Attempt all questions.\nRead each question carefully.\nMaintain academic integrity.'
+};
 
 const ExaminationsList = () => {
   const [exams, setExams] = useState([]);
@@ -22,21 +36,11 @@ const ExaminationsList = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
   const [selectedSetterId, setSelectedSetterId] = useState('');
+  const [editingExam, setEditingExam] = useState(null);
+  const [submittingExam, setSubmittingExam] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    session: '2025-2026',
-    course: 'B.Tech',
-    semester: 6,
-    subject: '',
-    durationMinutes: 120,
-    maxMarks: 50,
-    passingMarks: 20,
-    description: '',
-    instructions: 'Attempt all questions.\nRead each question carefully.\nMaintain academic integrity.'
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   const { showToast } = useToast();
 
@@ -73,21 +77,115 @@ const ExaminationsList = () => {
     }
   };
 
-  const handleCreateExam = async (e) => {
-    e.preventDefault();
+  const handleOpenCreate = () => {
+    setEditingExam(null);
+    setFormData(initialFormData);
+    setCreateModalOpen(true);
+  };
+
+  const handleOpenEdit = (exam) => {
+    setEditingExam(exam);
+    setFormData({
+      name: exam.name || '',
+      code: exam.code || '',
+      session: exam.session || '2025-2026',
+      course: exam.course || 'B.Tech',
+      semester: exam.semester || 6,
+      subject: exam.subject || '',
+      durationMinutes: exam.durationMinutes || 120,
+      maxMarks: exam.maxMarks || 50,
+      passingMarks: exam.passingMarks || 20,
+      description: exam.description || '',
+      instructions: Array.isArray(exam.instructions)
+        ? exam.instructions.join('\n')
+        : (exam.instructions || '')
+    });
+    setCreateModalOpen(true);
+  };
+
+  const handleDeleteExam = async (exam) => {
+    if (!window.confirm(`Are you sure you want to delete examination "${exam.name}" (${exam.code})?`)) return;
     try {
-      const payload = {
-        ...formData,
-        instructions: formData.instructions.split('\n').filter((i) => i.trim() !== '')
-      };
-      const res = await api.post('/examinations', payload);
+      const res = await api.delete(`/examinations/${exam._id}`);
       if (res.data.success) {
-        showToast('Examination created successfully!', 'success');
-        setCreateModalOpen(false);
+        showToast('Examination deleted successfully!', 'success');
         fetchExams();
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error creating exam', 'error');
+      showToast(err.response?.data?.message || 'Failed to delete examination', 'error');
+    }
+  };
+
+  const handleSaveExam = async (e) => {
+    e.preventDefault();
+
+    const cleanName = (formData.name || '').trim();
+    const cleanCode = (formData.code || '').trim().toUpperCase();
+    const cleanSubject = (formData.subject || '').trim();
+    const numMaxMarks = Number(formData.maxMarks);
+    const numDuration = Number(formData.durationMinutes);
+
+    if (!cleanName || !cleanCode || !cleanSubject) {
+      showToast('Examination Title, Code, and Subject are required.', 'warning');
+      return;
+    }
+
+    if (numMaxMarks <= 0) {
+      showToast('Maximum marks must be greater than 0.', 'warning');
+      return;
+    }
+
+    if (numDuration < 15) {
+      showToast('Duration must be at least 15 minutes.', 'warning');
+      return;
+    }
+
+    try {
+      setSubmittingExam(true);
+      const parsedInstructions = typeof formData.instructions === 'string'
+        ? formData.instructions.split('\n').map((i) => i.trim()).filter(Boolean)
+        : (Array.isArray(formData.instructions) ? formData.instructions : []);
+
+      const payload = {
+        name: cleanName,
+        code: cleanCode,
+        session: formData.session || '2025-2026',
+        course: formData.course || 'B.Tech',
+        semester: Number(formData.semester) || 6,
+        subject: cleanSubject,
+        durationMinutes: numDuration,
+        maxMarks: numMaxMarks,
+        passingMarks: Number(formData.passingMarks) || Math.round(numMaxMarks * 0.4),
+        description: formData.description || '',
+        instructions: parsedInstructions.length > 0 ? parsedInstructions : [
+          'Attempt all questions in sequence.',
+          'Read each question carefully before answering.',
+          'Maintain academic integrity.'
+        ]
+      };
+
+      if (editingExam) {
+        const res = await api.put(`/examinations/${editingExam._id}`, payload);
+        if (res.data.success) {
+          showToast('Examination updated successfully!', 'success');
+          setCreateModalOpen(false);
+          setEditingExam(null);
+          setFormData(initialFormData);
+          fetchExams();
+        }
+      } else {
+        const res = await api.post('/examinations', payload);
+        if (res.data.success) {
+          showToast('Examination created successfully!', 'success');
+          setCreateModalOpen(false);
+          setFormData(initialFormData);
+          fetchExams();
+        }
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error saving examination', 'error');
+    } finally {
+      setSubmittingExam(false);
     }
   };
 
@@ -128,7 +226,7 @@ const ExaminationsList = () => {
         subtitle="Configure academic sessions, courses, question paper guidelines, and setter assignments."
         breadcrumb="Academic Operations"
         action={
-          <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
+          <Button variant="primary" icon={Plus} onClick={handleOpenCreate}>
             Create New Examination
           </Button>
         }
@@ -268,6 +366,32 @@ const ExaminationsList = () => {
                         </Button>
                       )}
 
+                      {/* Edit action for draft exams */}
+                      {exam.status === 'DRAFT' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={Edit3}
+                          onClick={() => handleOpenEdit(exam)}
+                          className="text-[11px]"
+                        >
+                          Edit
+                        </Button>
+                      )}
+
+                      {/* Delete action for draft exams */}
+                      {exam.status === 'DRAFT' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={Trash2}
+                          onClick={() => handleDeleteExam(exam)}
+                          className="text-[11px] text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                        >
+                          Delete
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
                         variant="ghost"
@@ -288,14 +412,18 @@ const ExaminationsList = () => {
         </div>
       )}
 
-      {/* Create Examination Modal */}
+      {/* Create / Edit Examination Modal */}
       <Modal
         isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Create New Examination"
+        onClose={() => {
+          setCreateModalOpen(false);
+          setEditingExam(null);
+          setFormData(initialFormData);
+        }}
+        title={editingExam ? `Edit Examination - ${editingExam.code}` : 'Create New Examination'}
         maxWidth="max-w-2xl"
       >
-        <form onSubmit={handleCreateExam} className="space-y-4">
+        <form onSubmit={handleSaveExam} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Examination Title</label>
@@ -313,10 +441,13 @@ const ExaminationsList = () => {
               <input
                 type="text"
                 required
+                disabled={!!editingExam}
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 placeholder="e.g. CS-CN-601"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 uppercase font-mono"
+                className={`w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 uppercase font-mono ${
+                  editingExam ? 'opacity-60 cursor-not-allowed' : ''
+                }`}
               />
             </div>
           </div>
@@ -352,7 +483,7 @@ const ExaminationsList = () => {
                 max="12"
                 required
                 value={formData.semester}
-                onChange={(e) => setFormData({ ...formData, semester: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -366,7 +497,7 @@ const ExaminationsList = () => {
                 min="1"
                 required
                 value={formData.maxMarks}
-                onChange={(e) => setFormData({ ...formData, maxMarks: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, maxMarks: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
@@ -377,7 +508,7 @@ const ExaminationsList = () => {
                 min="15"
                 required
                 value={formData.durationMinutes}
-                onChange={(e) => setFormData({ ...formData, durationMinutes: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
@@ -394,11 +525,18 @@ const ExaminationsList = () => {
           </div>
 
           <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
-            <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCreateModalOpen(false);
+                setEditingExam(null);
+                setFormData(initialFormData);
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Create Examination
+            <Button type="submit" variant="primary" loading={submittingExam}>
+              {editingExam ? 'Update Examination' : 'Create Examination'}
             </Button>
           </div>
         </form>

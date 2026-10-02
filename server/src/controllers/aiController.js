@@ -76,15 +76,17 @@ exports.generatePaperFromSyllabus = async (req, res, next) => {
  */
 exports.regenerateSingleQuestion = async (req, res, next) => {
   try {
-    const { subject, unit, topic, marks, difficulty, questionType, existingQuestions } = req.body;
+    const { subject, unit, unitDescription, topic, marks, difficulty, questionType, questionPattern, existingQuestions } = req.body;
 
     const newQuestion = await geminiService.regenerateQuestion({
       subject,
       unit,
+      unitDescription,
       topic,
       marks: Number(marks) || 10,
       difficulty,
       questionType,
+      questionPattern: questionPattern || 'SIMPLE',
       existingQuestions: Array.isArray(existingQuestions) ? existingQuestions : []
     });
 
@@ -100,6 +102,7 @@ exports.regenerateSingleQuestion = async (req, res, next) => {
 
 /**
  * FEATURE 1 APPROVAL: Save AI-generated and Paper Setter-reviewed paper
+ * Section 8: Authoritative Final Acceptance Enforcement
  */
 exports.saveGeneratedPaper = async (req, res, next) => {
   try {
@@ -112,6 +115,55 @@ exports.saveGeneratedPaper = async (req, res, next) => {
 
     if (!Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one question is required.' });
+    }
+
+    // Section 8: Strict Paper Scheme Acceptance Verification
+    const blueprint = await MarksBlueprint.findOne({ examination: exam._id });
+    if (blueprint) {
+      const totalQ = questions.length;
+      const totalM = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
+
+      if (blueprint.totalQuestions && totalQ !== blueprint.totalQuestions) {
+        return res.status(400).json({
+          success: false,
+          message: `Paper rejected: Total questions (${totalQ}) does not match scheme total questions (${blueprint.totalQuestions}).`
+        });
+      }
+
+      const expectedTotalMarks = blueprint.totalMarks || exam.maxMarks;
+      if (expectedTotalMarks && totalM !== expectedTotalMarks) {
+        return res.status(400).json({
+          success: false,
+          message: `Paper rejected: Total marks (${totalM}) does not match scheme total marks (${expectedTotalMarks}).`
+        });
+      }
+
+      if (Array.isArray(blueprint.unitDistribution) && blueprint.unitDistribution.length > 0) {
+        for (const ud of blueprint.unitDistribution) {
+          const udNorm = (ud.unit || '').toLowerCase().trim();
+          const unitQuestions = questions.filter((q) => {
+            const qNorm = (q.unit || '').toLowerCase().trim();
+            return qNorm === udNorm || qNorm.includes(udNorm) || udNorm.includes(qNorm);
+          });
+
+          if (ud.questionsCount && unitQuestions.length !== ud.questionsCount) {
+            return res.status(400).json({
+              success: false,
+              message: `Paper rejected: Unit "${ud.unit}" has ${unitQuestions.length} questions, but scheme requires exactly ${ud.questionsCount}.`
+            });
+          }
+
+          if (ud.marks) {
+            const unitMarksSum = unitQuestions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
+            if (unitMarksSum !== ud.marks) {
+              return res.status(400).json({
+                success: false,
+                message: `Paper rejected: Unit "${ud.unit}" has ${unitMarksSum} marks, but scheme requires exactly ${ud.marks} marks.`
+              });
+            }
+          }
+        }
+      }
     }
 
     // Persist questions in Question collection so they belong to the bank and have valid IDs

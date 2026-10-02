@@ -15,7 +15,7 @@ router
   .get(questionPaperController.getQuestionPaperById)
   .put(authorize('ADMIN', 'EXAM_SETTER'), questionPaperController.createOrUpdateQuestionPaper);
 
-router.post('/:id/submit', authorize('EXAM_SETTER'), questionPaperController.submitQuestionPaper);
+router.post('/:id/submit', authorize('ADMIN', 'EXAM_SETTER'), questionPaperController.submitQuestionPaper);
 router.post('/:id/review', authorize('ADMIN'), questionPaperController.reviewQuestionPaper);
 
 module.exports = router;

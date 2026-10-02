@@ -56,6 +56,7 @@ exports.login = async (req, res, next) => {
       success: true,
       token,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         email: user.email,
@@ -75,6 +76,7 @@ exports.getMe = async (req, res, next) => {
     res.status(200).json({
       success: true,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         email: user.email,

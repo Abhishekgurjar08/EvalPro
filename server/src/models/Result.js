@@ -10,12 +10,25 @@ const resultSchema = new mongoose.Schema(
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: false,
+      default: null
     },
     answerCopy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'AnswerCopy',
       required: true
+    },
+    copyId: {
+      type: String,
+      default: ''
+    },
+    candidateName: {
+      type: String,
+      default: ''
+    },
+    candidateRollNo: {
+      type: String,
+      default: ''
     },
     totalMarks: {
       type: Number,
@@ -53,7 +66,9 @@ const resultSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Unique student per examination result
-resultSchema.index({ examination: 1, student: 1 }, { unique: true });
+// Unique answer copy per examination result
+resultSchema.index({ examination: 1, answerCopy: 1 }, { unique: true });
+resultSchema.index({ examination: 1, student: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Result', resultSchema);
+

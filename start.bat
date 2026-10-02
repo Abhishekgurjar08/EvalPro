@@ -1,6 +1,6 @@
 @echo off
 echo ====================================================
-echo Starting EvalPro Examination & Evaluation System
+echo Starting Pariksha AI Examination & Evaluation System
 echo ====================================================
 
 echo 1. Starting Backend Server on port 5000...

@@ -20,7 +20,8 @@ exports.getSyllabusByExam = async (req, res, next) => {
 
 exports.createOrUpdateSyllabus = async (req, res, next) => {
   try {
-    const { examinationId, subject, units } = req.body;
+    const examinationId = req.body.examinationId || req.body.examination || req.body.examId;
+    const { subject, units } = req.body;
 
     if (!examinationId || !subject) {
       return res.status(400).json({ success: false, message: 'Examination ID and subject are required.' });
@@ -28,15 +29,31 @@ exports.createOrUpdateSyllabus = async (req, res, next) => {
 
     let syllabus = await Syllabus.findOne({ examination: examinationId });
 
+    const normalizedUnits = (units || []).map((u, uIdx) => ({
+      unitNumber: Number(u.unitNumber) || (uIdx + 1),
+      title: u.title || `Unit ${uIdx + 1}`,
+      description: u.description || '',
+      topics: (u.topics || []).map((t, tIdx) => {
+        if (typeof t === 'string') {
+          return { topicNumber: tIdx + 1, title: t, description: '' };
+        }
+        return {
+          topicNumber: Number(t.topicNumber) || (tIdx + 1),
+          title: t.title || t.name || `Topic ${tIdx + 1}`,
+          description: t.description || ''
+        };
+      })
+    }));
+
     if (syllabus) {
       syllabus.subject = subject;
-      syllabus.units = units || [];
+      syllabus.units = normalizedUnits;
       await syllabus.save();
     } else {
       syllabus = await Syllabus.create({
         examination: examinationId,
         subject,
-        units: units || [],
+        units: normalizedUnits,
         createdBy: req.user._id
       });
     }

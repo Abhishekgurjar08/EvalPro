@@ -81,21 +81,20 @@ exports.getExaminationById = async (req, res, next) => {
 
 exports.createExamination = async (req, res, next) => {
   try {
-    const {
-      name,
-      code,
-      session,
-      course,
-      semester,
-      subject,
-      examDate,
-      startTime,
-      durationMinutes,
-      maxMarks,
-      passingMarks,
-      description,
-      instructions
-    } = req.body;
+    const name = (req.body.name || req.body.examName || req.body.title || '').trim();
+    const rawCode = (req.body.code || req.body.examCode || '').trim();
+    const code = rawCode.toUpperCase();
+    const session = req.body.session || '2025-2026';
+    const course = req.body.course || 'B.Tech';
+    const semester = req.body.semester ? Number(req.body.semester) : 6;
+    const subject = (req.body.subject || '').trim();
+    const examDate = req.body.examDate || new Date();
+    const startTime = req.body.startTime || '10:00 AM';
+    const durationMinutes = Number(req.body.durationMinutes || req.body.duration);
+    const maxMarks = Number(req.body.maxMarks || req.body.totalMarks);
+    const passingMarks = req.body.passingMarks ? Number(req.body.passingMarks) : Math.round(maxMarks * 0.4);
+    const description = req.body.description || '';
+    const rawInstructions = req.body.instructions;
 
     if (!name || !code || !subject || !maxMarks || !durationMinutes) {
       return res.status(400).json({
@@ -112,29 +111,37 @@ exports.createExamination = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Duration must be at least 15 minutes.' });
     }
 
-    const existing = await Examination.findOne({ code: code.toUpperCase().trim() });
+    const existing = await Examination.findOne({ code });
     if (existing) {
       return res.status(400).json({ success: false, message: `Exam code '${code}' already exists.` });
     }
 
+    let parsedInstructions = [
+      'Attempt all questions in sequence.',
+      'Read each question carefully before answering.',
+      'Maintain academic integrity.'
+    ];
+
+    if (Array.isArray(rawInstructions) && rawInstructions.length > 0) {
+      parsedInstructions = rawInstructions.map((i) => (typeof i === 'string' ? i.trim() : String(i))).filter(Boolean);
+    } else if (typeof rawInstructions === 'string' && rawInstructions.trim().length > 0) {
+      parsedInstructions = rawInstructions.split('\n').map((i) => i.trim()).filter(Boolean);
+    }
+
     const examination = await Examination.create({
       name,
-      code: code.toUpperCase().trim(),
-      session: session || '2025-2026',
-      course: course || 'B.Tech',
-      semester: semester || 6,
+      code,
+      session,
+      course,
+      semester,
       subject,
-      examDate: examDate || new Date(),
-      startTime: startTime || '10:00 AM',
+      examDate,
+      startTime,
       durationMinutes,
       maxMarks,
-      passingMarks: passingMarks || Math.round(maxMarks * 0.4),
-      description: description || '',
-      instructions: instructions || [
-        'Attempt all questions in sequence.',
-        'Read each question carefully before answering.',
-        'Maintain academic integrity.'
-      ],
+      passingMarks,
+      description,
+      instructions: parsedInstructions,
       status: 'DRAFT',
       createdBy: req.user._id
     });
@@ -215,7 +222,7 @@ exports.deleteExamination = async (req, res, next) => {
 // Assign Exam Setter
 exports.assignSetter = async (req, res, next) => {
   try {
-    const { setterId } = req.body;
+    const setterId = req.body.setterId || req.body.examSetterId || req.body.assignedSetter;
     const exam = await Examination.findById(req.params.id);
 
     if (!exam) {

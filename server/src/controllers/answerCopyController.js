@@ -14,10 +14,11 @@ const { calculateAndSaveResult } = require('../services/resultService');
 
 exports.getAnswerCopies = async (req, res, next) => {
   try {
-    const { examinationId, status, assigned, search, page = 1, limit = 200 } = req.query;
+    const examFilterId = req.query.examinationId || req.query.examination;
+    const { status, assigned, search, page = 1, limit = 200 } = req.query;
     const query = {};
 
-    if (examinationId) query.examination = examinationId;
+    if (examFilterId) query.examination = examFilterId;
     if (status) query.status = status;
 
     if (assigned === 'true') {
@@ -51,10 +52,10 @@ exports.getAnswerCopies = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
 
-    // Also get exam metadata if examinationId is passed
+    // Also get exam metadata if examFilterId is passed
     let examination = null;
-    if (examinationId) {
-      examination = await Examination.findById(examinationId)
+    if (examFilterId) {
+      examination = await Examination.findById(examFilterId)
         .select('name code subject maxMarks scanningStatus evaluationMode evaluationModeLocked evaluationModeLockedAt status examDate totalExpectedCopies');
     }
 
@@ -152,7 +153,7 @@ exports.getMyAssignedCopies = async (req, res, next) => {
 exports.selectEvaluationMode = async (req, res, next) => {
   try {
     const { examinationId } = req.params;
-    const { evaluationMode } = req.body;
+    const evaluationMode = req.body.evaluationMode || req.body.mode;
 
     const isAi = ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(evaluationMode);
     const isManual = evaluationMode === 'MANUAL';
@@ -217,7 +218,7 @@ exports.selectEvaluationMode = async (req, res, next) => {
 exports.lockEvaluationMode = async (req, res, next) => {
   try {
     const { examinationId } = req.params;
-    const { evaluationMode } = req.body;
+    const rawMode = req.body ? (req.body.evaluationMode || req.body.mode) : undefined;
 
     const exam = await Examination.findById(examinationId);
     if (!exam) {
@@ -232,7 +233,7 @@ exports.lockEvaluationMode = async (req, res, next) => {
       });
     }
 
-    const rawTarget = evaluationMode || exam.evaluationMode || 'MANUAL';
+    const rawTarget = rawMode || exam.evaluationMode || 'MANUAL';
     const isAi = ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(rawTarget);
     const targetMode = isAi ? 'AI_EVALUATION' : 'MANUAL';
 
@@ -812,20 +813,16 @@ async function processCopyAiEvaluation(copy) {
     });
   }
 
-  try {
-    await calculateAndSaveResult(copy._id, evaluation);
-  } catch (resErr) {
-    console.warn(`Result auto-calculation warning for copy ${copy.copyId}:`, resErr.message);
-  }
-
+  // AI evaluation is now complete in AI_EVALUATED state.
+  // Result is NOT finalized here — it awaits Admin Review and Finalize action.
   return { copy, evaluation };
 }
 
-// Admin: Start AI Evaluation for an examination's scanned copies
+// Admin: Start AI Evaluation for an examination's scanned copies (Batch: 50 to 100 copies supported)
 exports.startAiEvaluation = async (req, res, next) => {
   try {
     const { examinationId } = req.params;
-    const { copyIds, force = false } = req.body;
+    const { copyIds, force = false, batchSize, limit } = req.body;
 
     const exam = await Examination.findById(examinationId);
     if (!exam) {
@@ -844,9 +841,23 @@ exports.startAiEvaluation = async (req, res, next) => {
     let query = { examination: exam._id };
     if (Array.isArray(copyIds) && copyIds.length > 0) {
       query._id = { $in: copyIds };
+    } else if (!force) {
+      // Prioritize pending / un-evaluated copies
+      query.evaluationStatus = { $nin: ['AI_EVALUATED', 'ADMIN_REVIEWED', 'FINALIZED', 'COMPLETED', 'REVIEWED'] };
     }
 
-    const copies = await AnswerCopy.find(query);
+    let copyQuery = AnswerCopy.find(query);
+    const requestedCount = Number(batchSize || limit || req.body.count);
+    if (requestedCount && requestedCount > 0) {
+      copyQuery = copyQuery.limit(requestedCount);
+    }
+
+    let copies = await copyQuery;
+    if (copies.length === 0 && (!Array.isArray(copyIds) || copyIds.length === 0)) {
+      // Fallback: load available copies up to requestedCount or 100
+      copies = await AnswerCopy.find({ examination: exam._id }).limit(requestedCount || 100);
+    }
+
     if (copies.length === 0) {
       return res.status(400).json({ success: false, message: 'No answer copies found to evaluate.' });
     }
@@ -855,32 +866,38 @@ exports.startAiEvaluation = async (req, res, next) => {
     let skippedCount = 0;
     let failedCount = 0;
 
-    for (const copy of copies) {
-      // Duplicate AI Evaluation protection:
-      // If status is Processing or Evaluated or Reviewed, do not automatically start another evaluation unless force is true
-      if (!force && ['AI_PROCESSING', 'AI_EVALUATED', 'ADMIN_REVIEWED', 'PROCESSING', 'EVALUATED', 'REVIEWED'].includes(copy.evaluationStatus)) {
-        skippedCount++;
-        continue;
-      }
+    // Process in concurrent chunks of 5 for high performance and no timeouts
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < copies.length; i += CHUNK_SIZE) {
+      const chunk = copies.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (copy) => {
+          // If not force, skip already completed copies
+          if (!force && ['AI_PROCESSING', 'AI_EVALUATED', 'ADMIN_REVIEWED', 'FINALIZED', 'COMPLETED', 'REVIEWED'].includes(copy.evaluationStatus)) {
+            skippedCount++;
+            return;
+          }
 
-      copy.evaluationStatus = 'AI_PROCESSING';
-      copy.status = 'AI_PROCESSING';
-      copy.evaluationMode = 'AI_EVALUATION';
-      copy.assignedEvaluator = null;
-      copy.assignedAt = null;
-      await copy.save();
+          copy.evaluationStatus = 'AI_PROCESSING';
+          copy.status = 'AI_PROCESSING';
+          copy.evaluationMode = 'AI_EVALUATION';
+          copy.assignedEvaluator = null;
+          copy.assignedAt = null;
+          await copy.save();
 
-      try {
-        await processCopyAiEvaluation(copy);
-        processedCount++;
-      } catch (err) {
-        console.error(`AI Evaluation failed for copy ${copy.copyId}:`, err);
-        copy.evaluationStatus = 'AI_FAILED';
-        copy.status = 'AI_FAILED';
-        copy.errorMessage = err.message || 'AI evaluation processing failed';
-        await copy.save();
-        failedCount++;
-      }
+          try {
+            await processCopyAiEvaluation(copy);
+            processedCount++;
+          } catch (err) {
+            console.error(`AI Evaluation failed for copy ${copy.copyId}:`, err);
+            copy.evaluationStatus = 'AI_FAILED';
+            copy.status = 'AI_FAILED';
+            copy.errorMessage = err.message || 'AI evaluation processing failed';
+            await copy.save();
+            failedCount++;
+          }
+        })
+      );
     }
 
     await logAudit({
@@ -892,7 +909,8 @@ exports.startAiEvaluation = async (req, res, next) => {
         totalTargeted: copies.length,
         processedCount,
         skippedCount,
-        failedCount
+        failedCount,
+        batchSize: requestedCount || copies.length
       }
     });
 
@@ -986,11 +1004,11 @@ exports.saveAdminFinalMarks = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Answer copy not found' });
     }
 
-    // Admin can edit marks after evaluation has produced a result
-    if (!['AI_EVALUATED', 'AI_REVIEWED', 'EVALUATED', 'REVIEWED', 'ADMIN_REVIEWED', 'COMPLETED', 'AI_APPROVED'].includes(copy.evaluationStatus)) {
+    // Admin can edit marks after evaluation or during evaluation review
+    if (!copy.answers || copy.answers.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Marks can only be reviewed and edited after evaluation has produced a result.'
+        message: 'This answer copy has no question items recorded.'
       });
     }
 
@@ -1010,13 +1028,15 @@ exports.saveAdminFinalMarks = async (req, res, next) => {
         });
       }
 
-      const finalVal = Number(qm.finalMarks);
+      const rawVal = qm.finalMarks ?? qm.marksAwarded ?? qm.marks ?? qm.awardedMarks;
+      const finalVal = Number(rawVal);
       if (isNaN(finalVal) || finalVal < 0 || finalVal > targetAns.maxMarks) {
         return res.status(400).json({
           success: false,
-          message: `Invalid marks for Question ${targetAns.questionNumber}. Marks (${qm.finalMarks}) must be between 0 and maximum marks (${targetAns.maxMarks}).`
+          message: `Invalid marks for Question ${targetAns.questionNumber}. Marks (${rawVal}) must be between 0 and maximum marks (${targetAns.maxMarks}).`
         });
       }
+      qm.finalMarks = finalVal;
     }
 
     // 2. Save Admin-modified finalMarks, keep aiMarks unchanged, recalculate totals
@@ -1073,9 +1093,8 @@ exports.saveAdminFinalMarks = async (req, res, next) => {
     copy.aiTotal = recalculatedAiTotal;
     copy.totalAwardedMarks = recalculatedFinalTotal;
     copy.totalMaxMarks = totalMax;
-    const isAiMode = ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(copy.evaluationMode);
-    copy.evaluationStatus = isAiMode ? 'AI_REVIEWED' : 'ADMIN_REVIEWED';
-    copy.status = copy.evaluationStatus;
+    copy.evaluationStatus = 'FINALIZED';
+    copy.status = 'FINALIZED';
     copy.reviewedAt = new Date();
     copy.reviewedBy = req.user._id;
     await copy.save();

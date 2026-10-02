@@ -1,8 +1,8 @@
-# EvalPro - Complete MERN Examination Management & Answer Evaluation System
+# Pariksha AI - Complete MERN Examination Management & Answer Evaluation System
 
 A scalable, production-grade **Examination Management and Answer Evaluation System** built strictly on the **MERN (MongoDB, Express.js, React.js, Node.js)** stack.
 
-EvalPro provides a complete digital academic lifecycle: from examination scheduling and setter appointments, through syllabus, question bank, and rubric creation, to live online test conduct, manual/digital evaluation, and **AI-assisted question-wise grading with human evaluator oversight**.
+Pariksha AI provides a complete digital academic lifecycle: from examination scheduling and setter appointments, through syllabus, question bank, and rubric creation, to live online test conduct, manual/digital evaluation, and **AI-assisted question-wise grading with human evaluator oversight**.
 
 ---
 
@@ -205,7 +205,7 @@ node testWorkflow.js
 
 ## 7. Google Gemini AI Integration
 
-EvalPro integrates the official **Google Gemini AI** SDK (`@google/generative-ai`) inside a dedicated service layer (`server/src/services/geminiService.js`) for two major examination capabilities:
+Pariksha AI integrates the official **Google Gemini AI** SDK (`@google/generative-ai`) inside a dedicated service layer (`server/src/services/geminiService.js`) for two major examination capabilities:
 
 ### 1. AI Question Paper Generation from Syllabus
 * **Workflow**: After the Paper Setter saves the Syllabus (Units & Topics), the system provides two clear paths:

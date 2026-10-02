@@ -25,12 +25,19 @@ const calculateAndSaveResult = async (answerCopyId, evaluation) => {
     const passingMarks = exam.passingMarks || Math.round(maxMarks * 0.4);
     const passed = totalMarks >= passingMarks;
 
+    const resQuery = answerCopy.student
+      ? { examination: exam._id, student: answerCopy.student }
+      : { examination: exam._id, answerCopy: answerCopy._id };
+
     const result = await Result.findOneAndUpdate(
-      { examination: exam._id, student: answerCopy.student },
+      resQuery,
       {
         examination: exam._id,
-        student: answerCopy.student,
+        student: answerCopy.student || null,
         answerCopy: answerCopy._id,
+        copyId: answerCopy.copyId || '',
+        candidateName: answerCopy.candidateName || answerCopy.student?.name || '',
+        candidateRollNo: answerCopy.candidateRollNo || answerCopy.student?.studentRollNo || '',
         totalMarks,
         maxMarks,
         percentage,
@@ -42,11 +49,12 @@ const calculateAndSaveResult = async (answerCopyId, evaluation) => {
     );
 
     // Update answer copy marks and percentage
+    answerCopy.finalTotal = totalMarks;
     answerCopy.totalAwardedMarks = totalMarks;
     answerCopy.totalMaxMarks = maxMarks;
     answerCopy.percentage = percentage;
     answerCopy.evaluatedAt = new Date();
-    if (answerCopy.evaluationStatus !== 'REVIEWED') {
+    if (!['FINALIZED', 'REVIEWED'].includes(answerCopy.evaluationStatus)) {
       answerCopy.evaluationStatus = 'COMPLETED';
     }
     await answerCopy.save();

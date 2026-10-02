@@ -151,7 +151,7 @@ const MyExaminations = () => {
 
                 <Link to={`/setter/syllabus/${exam._id}`}>
                   <Button size="sm" variant="outline" icon={Layers}>
-                    Syllabus & Blueprint
+                    Syllabus & Paper Scheme
                   </Button>
                 </Link>
 

@@ -53,6 +53,13 @@ const ScanAnswerCopies = () => {
   const [runningAiBatch, setRunningAiBatch] = useState(false);
   const [evaluatingCopyId, setEvaluatingCopyId] = useState(null);
 
+  // AI Batch Selection & Admin Review State (Batch: 50 to 100 copies supported)
+  const [aiBatchSize, setAiBatchSize] = useState(50);
+  const [reviewModalCopy, setReviewModalCopy] = useState(null);
+  const [reviewForm, setReviewForm] = useState({});
+  const [reviewOverallComment, setReviewOverallComment] = useState('');
+  const [savingFinalMarks, setSavingFinalMarks] = useState(false);
+
   const isAiMode =
     ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(selectedMode) ||
     ['AI_EVALUATION', 'AI', 'AI_ASSISTED'].includes(exam?.evaluationMode);
@@ -157,13 +164,57 @@ const ScanAnswerCopies = () => {
     }
   };
 
-  // Start Batch AI Evaluation for all copies (Section 2 & 12)
-  const handleStartAiEvaluation = async () => {
+  // Eligible copies for AI evaluation (not already finalized)
+  const getEligibleAiCopies = () => {
+    return copies.filter((c) => !['FINALIZED', 'ADMIN_REVIEWED'].includes(c.evaluationStatus));
+  };
+
+  // Quick Batch Selection (50, 100 copies or custom)
+  const handleSelectRandomAiCopies = (count) => {
+    const eligible = getEligibleAiCopies();
+    const pool = eligible.length > 0 ? eligible : copies;
+    if (pool.length === 0) {
+      showToast('No copies available to evaluate.', 'warning');
+      return;
+    }
+    const targetCount = Math.min(Number(count) || 50, pool.length);
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const selected = shuffled.slice(0, targetCount);
+    setSelectedCopyIds(selected.map((c) => c._id));
+    setAiBatchSize(targetCount);
+    showToast(`Selected ${selected.length} copies for AI Evaluation batch!`, 'success');
+  };
+
+  const selectAllAiCopies = () => {
+    const eligible = getEligibleAiCopies();
+    const target = eligible.length > 0 ? eligible : copies;
+    setSelectedCopyIds(target.map((c) => c._id));
+    setAiBatchSize(target.length);
+    showToast(`Selected all ${target.length} copies for AI Evaluation!`, 'info');
+  };
+
+  // Start Batch AI Evaluation (Supports minimum 50 to maximum 100 copies in one go)
+  const handleStartAiEvaluation = async (batchCount = null) => {
     try {
       setRunningAiBatch(true);
-      const res = await api.post(`/answer-copies/${id}/start-ai-evaluation`);
+      const payload = { force: true };
+      if (selectedCopyIds.length > 0) {
+        payload.copyIds = selectedCopyIds;
+      } else {
+        payload.batchSize = batchCount || aiBatchSize || 50;
+      }
+
+      const res = await api.post(`/answer-copies/${id}/start-ai-evaluation`, payload);
       if (res.data.success) {
-        showToast(res.data.message || 'AI Evaluation completed!', 'success');
+        showToast(
+          res.data.message || `AI Evaluation completed for ${res.data.stats?.processed ?? 'selected'} copies!`,
+          'success'
+        );
+        setSelectedCopyIds([]);
         await fetchInitialData();
       }
     } catch (err) {
@@ -171,6 +222,115 @@ const ScanAnswerCopies = () => {
     } finally {
       setRunningAiBatch(false);
     }
+  };
+
+  // Open Admin Review & Modify Marks Modal
+  const openAiReviewModal = async (copy) => {
+    try {
+      const res = await api.get(`/answer-copies/${copy._id}`);
+      if (res.data.success) {
+        const loadedCopy = res.data.answerCopy;
+        const initialForm = {};
+        if (Array.isArray(loadedCopy.answers)) {
+          for (const ans of loadedCopy.answers) {
+            const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
+            const aiScore = ans.aiMarks !== null && ans.aiMarks !== undefined ? ans.aiMarks : (ans.aiSuggestedMarks ?? ans.marksAwarded ?? 0);
+            const finalScore = ans.finalMarks !== null && ans.finalMarks !== undefined ? ans.finalMarks : aiScore;
+            initialForm[qId] = {
+              finalMarks: finalScore,
+              comments: ans.adminComment || ans.evaluatorRemarks || ''
+            };
+          }
+        }
+        setReviewForm(initialForm);
+        setReviewOverallComment(loadedCopy.aiEvaluationSummary?.overallFeedback || '');
+        setReviewModalCopy(loadedCopy);
+      }
+    } catch (err) {
+      showToast('Failed to load copy details for AI review', 'error');
+    }
+  };
+
+  // Handle Mark Change in Admin Review Modal
+  const handleReviewMarkChange = (qId, val, maxMarks) => {
+    if (val === '') {
+      setReviewForm((prev) => ({
+        ...prev,
+        [qId]: { ...prev[qId], finalMarks: '' }
+      }));
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || num > maxMarks) {
+      showToast(`Marks must be between 0 and maximum marks (${maxMarks}).`, 'warning');
+      return;
+    }
+    setReviewForm((prev) => ({
+      ...prev,
+      [qId]: { ...prev[qId], finalMarks: num }
+    }));
+  };
+
+  const handleReviewCommentChange = (qId, comment) => {
+    setReviewForm((prev) => ({
+      ...prev,
+      [qId]: { ...prev[qId], comments: comment }
+    }));
+  };
+
+  // Save Final Marks & Finalize Evaluation
+  const handleSaveFinalMarks = async () => {
+    if (!reviewModalCopy) return;
+
+    for (const ans of reviewModalCopy.answers || []) {
+      const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
+      const val = Number(reviewForm[qId]?.finalMarks);
+      if (isNaN(val) || val < 0 || val > ans.maxMarks) {
+        showToast(
+          `Invalid marks for Question ${ans.questionNumber}. Must be between 0 and ${ans.maxMarks}.`,
+          'error'
+        );
+        return;
+      }
+    }
+
+    try {
+      setSavingFinalMarks(true);
+      const questionMarksPayload = (reviewModalCopy.answers || []).map((ans) => {
+        const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
+        const entry = reviewForm[qId] || {};
+        return {
+          questionId: qId,
+          questionNumber: ans.questionNumber,
+          finalMarks: Number(entry.finalMarks),
+          comments: entry.comments || ''
+        };
+      });
+
+      const res = await api.put(`/answer-copies/${reviewModalCopy._id}/admin-save-marks`, {
+        questionMarks: questionMarksPayload,
+        overallComments: reviewOverallComment || 'Admin reviewed and modified marks.'
+      });
+
+      if (res.data.success) {
+        showToast(res.data.message || 'Evaluation finalized successfully! Status updated to FINALIZED.', 'success');
+        setReviewModalCopy(null);
+        await reloadCopies();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error saving final marks', 'error');
+    } finally {
+      setSavingFinalMarks(false);
+    }
+  };
+
+  const calculateModalFinalTotal = () => {
+    if (!reviewModalCopy?.answers) return 0;
+    return reviewModalCopy.answers.reduce((acc, ans) => {
+      const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
+      const val = Number(reviewForm[qId]?.finalMarks);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
   };
 
   // Run AI Evaluation on a single copy
@@ -701,16 +861,25 @@ const ScanAnswerCopies = () => {
 
           <div className="flex items-center space-x-2">
             {isAiMode ? (
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Sparkles}
-                loading={runningAiBatch}
-                onClick={() => setConfirmAiModalCopy('BATCH')}
-                className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white"
-              >
-                🤖 Evaluate All with AI
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={Sparkles}
+                  loading={runningAiBatch}
+                  onClick={() => {
+                    if (selectedCopyIds.length === 0) {
+                      handleSelectRandomAiCopies(50);
+                    }
+                    setConfirmAiModalCopy('BATCH');
+                  }}
+                  className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium shadow-md shadow-indigo-950/50"
+                >
+                  {selectedCopyIds.length > 0
+                    ? `🤖 Evaluate Selected (${selectedCopyIds.length}) with AI`
+                    : `🤖 Evaluate Batch (50 - 100 Copies) with AI`}
+                </Button>
+              </div>
             ) : (
               <>
                 {selectedCopyIds.length > 0 && (
@@ -737,6 +906,61 @@ const ScanAnswerCopies = () => {
           </div>
         </div>
 
+        {/* AI BATCH SELECTION TOOLBAR (Min 50 to Max 100 copies supported) */}
+        {isAiMode && totalCopies > 0 && (
+          <div className="p-3 bg-slate-950/80 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-slate-400">
+                Eligible Copies:{' '}
+                <strong className="text-white font-mono font-bold">
+                  {getEligibleAiCopies().length}
+                </strong>
+              </span>
+              {selectedCopyIds.length > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono text-[11px]">
+                  {selectedCopyIds.length} Selected for AI Check
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-slate-400 text-[11px] font-medium">Quick Batch Select:</span>
+              <button
+                type="button"
+                onClick={() => handleSelectRandomAiCopies(50)}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs transition-colors shadow-sm"
+              >
+                ⚡ 50 Copies
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectRandomAiCopies(100)}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs transition-colors shadow-sm"
+              >
+                ⚡ 100 Copies
+              </button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAllAiCopies}
+                className="text-xs"
+              >
+                Select All
+              </Button>
+              {selectedCopyIds.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedCopyIds([])}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  Clear Selection
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {totalCopies === 0 ? (
           <EmptyState
             title="No Scanned Answer Copies Ingested"
@@ -757,21 +981,24 @@ const ScanAnswerCopies = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
                 <tr>
-                  {isAiMode ? (
-                    <th className="py-3 px-4 w-12 text-center text-slate-500">#</th>
-                  ) : (
-                    <th className="py-3 px-4 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedCopyIds.length > 0 && selectedCopyIds.length === copies.filter((c) => !c.assignedEvaluator).length}
-                        onChange={(e) => {
-                          if (e.target.checked) selectAllUnassigned();
-                          else setSelectedCopyIds([]);
-                        }}
-                        className="rounded border-slate-700 bg-slate-900"
-                      />
-                    </th>
-                  )}
+                  <th className="py-3 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedCopyIds.length > 0 &&
+                        selectedCopyIds.length === (isAiMode ? copies.length : copies.filter((c) => !c.assignedEvaluator).length)
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          if (isAiMode) selectAllAiCopies();
+                          else selectAllUnassigned();
+                        } else {
+                          setSelectedCopyIds([]);
+                        }
+                      }}
+                      className="rounded border-slate-700 bg-slate-900 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </th>
                   <th className="py-3 px-4">Copy ID</th>
                   <th className="py-3 px-4">Candidate Identifier</th>
                   <th className="py-3 px-4">Status</th>
@@ -784,26 +1011,18 @@ const ScanAnswerCopies = () => {
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {copies.map((copy, idx) => {
                   const isAssigned = !!copy.assignedEvaluator;
-                  const isCompleted = ['AI_EVALUATED', 'AI_REVIEWED', 'EVALUATED', 'REVIEWED', 'COMPLETED', 'AI_APPROVED', 'ADMIN_REVIEWED'].includes(copy.evaluationStatus);
+                  const isCompleted = ['AI_EVALUATED', 'AI_REVIEWED', 'EVALUATED', 'REVIEWED', 'COMPLETED', 'AI_APPROVED', 'ADMIN_REVIEWED', 'FINALIZED'].includes(copy.evaluationStatus);
 
                   return (
                     <tr key={copy._id} className="hover:bg-slate-800/30 transition-colors">
-                      {isAiMode ? (
-                        <td className="py-3 px-4 text-center text-slate-500 font-mono font-medium">
-                          {idx + 1}
-                        </td>
-                      ) : (
-                        <td className="py-3 px-4">
-                          {!isAssigned && (
-                            <input
-                              type="checkbox"
-                              checked={selectedCopyIds.includes(copy._id)}
-                              onChange={() => toggleSelectCopy(copy._id)}
-                              className="rounded border-slate-700 bg-slate-900"
-                            />
-                          )}
-                        </td>
-                      )}
+                      <td className="py-3 px-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedCopyIds.includes(copy._id)}
+                          onChange={() => toggleSelectCopy(copy._id)}
+                          className="rounded border-slate-700 bg-slate-900 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </td>
 
                       {/* Copy ID */}
                       <td className="py-3 px-4 font-mono font-bold text-white">
@@ -941,16 +1160,26 @@ const ScanAnswerCopies = () => {
                           // STRICT REQUIREMENT: In AI Evaluation, NEVER show Assign Evaluator!
                           <>
                             {isCompleted ? (
-                              <Link to={`/admin/evaluate/${copy._id}`}>
+                              <div className="inline-flex items-center space-x-1.5">
                                 <Button
                                   size="sm"
                                   variant="primary"
                                   icon={CheckCircle2}
-                                  className="text-[11px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
+                                  onClick={() => openAiReviewModal(copy)}
+                                  className="text-[11px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm"
                                 >
-                                  Review AI Evaluation
+                                  Review & Modify Marks
                                 </Button>
-                              </Link>
+                                <Link to={`/admin/evaluate/${copy._id}`}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    icon={ExternalLink}
+                                    title="Open Full Evaluation Workspace"
+                                    className="text-[11px] px-2 text-slate-300 hover:text-white"
+                                  />
+                                </Link>
+                              </div>
                             ) : ['AI_PROCESSING', 'PROCESSING'].includes(copy.evaluationStatus) || evaluatingCopyId === copy._id ? (
                               <Button
                                 size="sm"
@@ -1105,7 +1334,8 @@ const ScanAnswerCopies = () => {
       <Modal
         isOpen={!!confirmAiModalCopy}
         onClose={() => setConfirmAiModalCopy(null)}
-        title="Evaluate Scanned Copy with AI?"
+        title={confirmAiModalCopy === 'BATCH' ? "Start Batch AI Evaluation (50 to 100 Copies)" : "Evaluate Scanned Copy with AI"}
+        maxWidth="max-w-lg"
       >
         <div className="space-y-4 text-xs">
           <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 text-slate-200 space-y-3">
@@ -1114,11 +1344,49 @@ const ScanAnswerCopies = () => {
               <span>AI Evaluation Confirmation</span>
             </div>
             <p className="leading-relaxed text-slate-300">
-              This answer copy will be automatically evaluated using the configured AI evaluation system.
+              The answer copies will be automatically evaluated using the configured AI evaluation engine.
             </p>
             <p className="leading-relaxed text-slate-400 text-[11px]">
-              The generated marks and feedback can be reviewed and modified by the Admin after evaluation.
+              After evaluation completes, Admin can review questions, modify marks, and save final grades.
             </p>
+
+            {confirmAiModalCopy === 'BATCH' && (
+              <div className="mt-3 pt-3 border-t border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300 font-medium">Batch Size to Evaluate:</span>
+                  <div className="flex items-center space-x-1.5 font-mono">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRandomAiCopies(50)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                        selectedCopyIds.length === 50
+                          ? 'bg-indigo-600 text-white border-indigo-500'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                      }`}
+                    >
+                      50 Copies
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRandomAiCopies(100)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                        selectedCopyIds.length === 100
+                          ? 'bg-indigo-600 text-white border-indigo-500'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                      }`}
+                    >
+                      100 Copies
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-mono text-amber-300 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                  <span>Selected for AI Checking:</span>
+                  <strong>{selectedCopyIds.length > 0 ? selectedCopyIds.length : Math.min(50, copies.length)} copies</strong>
+                </div>
+              </div>
+            )}
+
             {confirmAiModalCopy && confirmAiModalCopy !== 'BATCH' && (
               <div className="mt-2 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
                 <span className="text-slate-400">
@@ -1129,11 +1397,6 @@ const ScanAnswerCopies = () => {
                 </span>
               </div>
             )}
-            {confirmAiModalCopy === 'BATCH' && (
-              <div className="mt-2 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-amber-300">
-                Evaluation Target: All {copies.length} scanned copies for this examination.
-              </div>
-            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-2">
@@ -1141,6 +1404,7 @@ const ScanAnswerCopies = () => {
               type="button"
               variant="outline"
               size="sm"
+              disabled={runningAiBatch}
               onClick={() => setConfirmAiModalCopy(null)}
             >
               Cancel
@@ -1155,15 +1419,194 @@ const ScanAnswerCopies = () => {
                 const target = confirmAiModalCopy;
                 setConfirmAiModalCopy(null);
                 if (target === 'BATCH') {
-                  await handleStartAiEvaluation();
+                  const targetCount = selectedCopyIds.length > 0 ? selectedCopyIds.length : Math.min(50, copies.length);
+                  await handleStartAiEvaluation(targetCount);
                 } else if (target?._id) {
                   await handleSingleCopyAiEvaluate(target._id);
                 }
               }}
-              className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white"
+              className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium"
             >
-              Evaluate with AI
+              Start AI Checking
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ADMIN AI REVIEW & MARKS MODIFICATION MODAL */}
+      <Modal
+        isOpen={!!reviewModalCopy}
+        onClose={() => !savingFinalMarks && setReviewModalCopy(null)}
+        title={`Review & Modify AI Marks: ${reviewModalCopy?.copyId}`}
+        maxWidth="max-w-3xl"
+      >
+        <div className="space-y-4 text-xs max-h-[75vh] overflow-y-auto pr-1">
+          {/* Header Summary */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 grid grid-cols-3 gap-3">
+            <div>
+              <span className="text-slate-400 block text-[10px] uppercase">Candidate</span>
+              <span className="font-semibold text-slate-100">
+                {reviewModalCopy?.candidateName || reviewModalCopy?.student?.name || 'Candidate'}
+              </span>
+              <span className="text-[10px] text-slate-400 block font-mono">
+                Roll: {reviewModalCopy?.candidateRollNo || reviewModalCopy?.student?.studentRollNo || 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px] uppercase">Subject & Booklet</span>
+              <span className="font-semibold text-indigo-400">{exam?.subject || reviewModalCopy?.subject}</span>
+              <span className="text-[10px] text-slate-400 block font-mono">
+                Booklet: {reviewModalCopy?.bookletNumber || 'N/A'}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-slate-400 block text-[10px] uppercase">Live Calculated Total</span>
+              <span className="text-lg font-bold font-mono text-emerald-400">
+                {calculateModalFinalTotal()} / {reviewModalCopy?.totalMaxMarks || exam?.maxMarks || 50}
+              </span>
+              <span className="text-[10px] text-slate-400 block">
+                Original AI: {reviewModalCopy?.aiTotal ?? 0}m
+              </span>
+            </div>
+          </div>
+
+          {/* Question by Question Review & Mark Overrides */}
+          <div className="space-y-3">
+            <h5 className="font-semibold text-slate-200 text-xs uppercase tracking-wider flex items-center justify-between">
+              <span>Question-Wise Marks & Overrides</span>
+              <span className="text-[11px] text-slate-400 font-normal">
+                Admin can edit marks and comments below
+              </span>
+            </h5>
+
+            {(reviewModalCopy?.answers || []).map((ans, idx) => {
+              const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
+              const qNum = ans.questionNumber || idx + 1;
+              const aiMarks = ans.aiMarks !== null && ans.aiMarks !== undefined ? ans.aiMarks : (ans.aiSuggestedMarks ?? ans.marksAwarded ?? 0);
+              const formEntry = reviewForm[qId] || {};
+              const currentMarks = formEntry.finalMarks !== undefined ? formEntry.finalMarks : aiMarks;
+              const isModified = currentMarks !== '' && Number(currentMarks) !== Number(aiMarks);
+
+              return (
+                <div
+                  key={qId}
+                  className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5 hover:border-slate-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs">
+                      Question {qNum}{' '}
+                      <span className="text-slate-400 font-normal font-mono">
+                        (Max: {ans.maxMarks} marks)
+                      </span>
+                    </span>
+
+                    <div className="flex items-center space-x-3">
+                      <span className="text-[11px] text-amber-400 font-mono">
+                        AI Score: <strong>{aiMarks}</strong>/{ans.maxMarks}
+                      </span>
+                      {isModified && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Modified by Admin
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Student Answer */}
+                  {ans.studentAnswer && (
+                    <div className="p-2.5 bg-slate-950 rounded border border-slate-800 text-slate-300 text-xs">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Candidate Answer:
+                      </span>
+                      <p className="line-clamp-3 font-mono text-[11px]">{ans.studentAnswer}</p>
+                    </div>
+                  )}
+
+                  {/* AI Feedback */}
+                  {(ans.aiFeedback || ans.aiAnalysis) && (
+                    <div className="p-2 bg-amber-500/5 rounded border border-amber-500/20 text-amber-200/90 text-[11px]">
+                      <span className="font-semibold text-amber-400">AI Feedback: </span>
+                      {ans.aiFeedback || ans.aiAnalysis}
+                    </div>
+                  )}
+
+                  {/* Edit Marks & Admin Comments */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-800/80 items-center">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-[11px] font-semibold text-slate-300 shrink-0">
+                        Final Marks:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={ans.maxMarks}
+                        step="0.5"
+                        value={currentMarks}
+                        onChange={(e) => handleReviewMarkChange(qId, e.target.value, ans.maxMarks)}
+                        className="w-20 bg-slate-950 border border-indigo-500/60 rounded px-2.5 py-1 text-center font-mono font-bold text-sm text-emerald-400 focus:outline-none focus:border-indigo-400"
+                      />
+                      <span className="text-slate-400 font-mono text-xs">/ {ans.maxMarks}</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <input
+                        type="text"
+                        placeholder="Admin comment / remark for Question (optional)..."
+                        value={formEntry.comments || ''}
+                        onChange={(e) => handleReviewCommentChange(qId, e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Overall Remarks */}
+          <div className="space-y-1 pt-2 border-t border-slate-800">
+            <label className="text-[11px] font-semibold text-slate-300">
+              Overall Evaluation Remarks (Admin)
+            </label>
+            <textarea
+              rows={2}
+              value={reviewOverallComment}
+              onChange={(e) => setReviewOverallComment(e.target.value)}
+              placeholder="Provide overall review notes, confirmation rationale, or student feedback..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <Link
+              to={`/admin/evaluate/${reviewModalCopy?._id}`}
+              className="text-xs text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center space-x-1"
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1" />
+              Open Full Evaluation Workspace
+            </Link>
+
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingFinalMarks}
+                onClick={() => setReviewModalCopy(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={CheckCircle2}
+                loading={savingFinalMarks}
+                onClick={handleSaveFinalMarks}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-950/40"
+              >
+                Save & Finalize Marks
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

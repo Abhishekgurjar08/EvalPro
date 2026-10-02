@@ -21,35 +21,42 @@ exports.saveDraftEvaluation = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'You are not authorized to evaluate this copy.' });
     }
 
-    // Backend mode enforcement: Evaluator cannot submit manual marks in AI mode
-    if (req.user.role === 'EVALUATOR' && copy.examination?.evaluationModeLocked && copy.examination?.evaluationMode === 'AI_ASSISTED') {
-      return res.status(400).json({
-        success: false,
-        message: 'This examination is locked in AI-Assisted Evaluation mode. Manual marks cannot be entered. Please review AI marking and click Approve.'
-      });
-    }
-
-    // Validate marks non-negative and <= maxMarks
+    // Validate marks non-negative and <= maxMarks, and normalize question references
     let calculatedTotal = 0;
     let maxPossible = 0;
+    const normalizedQuestionEvals = [];
 
     for (const qe of questionEvaluations || []) {
-      const awarded = Number(qe.marksAwarded) || 0;
-      const maxM = Number(qe.maxMarks) || 10;
+      const qNum = Number(qe.questionNumber);
+      const matchedAns = copy.answers?.find(
+        (a) => (a.question?._id || a.question)?.toString() === (qe.question?._id || qe.question || qe.questionId)?.toString() || a.questionNumber === qNum
+      );
+      const qId = qe.question || qe.questionId || (matchedAns && (matchedAns.question?._id || matchedAns.question)) || undefined;
+      const maxM = Number(qe.maxMarks || (matchedAns && matchedAns.maxMarks) || 10);
+      const awarded = Number(qe.marksAwarded ?? qe.finalMarks ?? 0);
+
       if (awarded < 0 || awarded > maxM) {
         return res.status(400).json({
           success: false,
-          message: `Marks for Question ${qe.questionNumber} (${awarded}) must be between 0 and ${maxM}.`
+          message: `Marks for Question ${qNum} (${awarded}) must be between 0 and ${maxM}.`
         });
       }
       calculatedTotal += awarded;
       maxPossible += maxM;
+
+      normalizedQuestionEvals.push({
+        ...qe,
+        question: qId,
+        questionNumber: qNum,
+        maxMarks: maxM,
+        marksAwarded: awarded
+      });
     }
 
     let evaluation = await Evaluation.findOne({ answerCopy: copy._id });
 
     if (evaluation) {
-      evaluation.questionEvaluations = questionEvaluations;
+      evaluation.questionEvaluations = normalizedQuestionEvals;
       evaluation.evaluationMode = copy.examination?.evaluationMode || evaluationMode || copy.evaluationMode || 'MANUAL';
       evaluation.totalMarks = calculatedTotal;
       evaluation.maxPossibleMarks = maxPossible;
@@ -64,7 +71,7 @@ exports.saveDraftEvaluation = async (req, res, next) => {
         evaluator: req.user._id,
         evaluationMode: copy.examination?.evaluationMode || evaluationMode || copy.evaluationMode || 'MANUAL',
         isDraft: true,
-        questionEvaluations,
+        questionEvaluations: normalizedQuestionEvals,
         totalMarks: calculatedTotal,
         maxPossibleMarks: maxPossible,
         percentage: maxPossible > 0 ? Math.round((calculatedTotal / maxPossible) * 100 * 10) / 10 : 0,
@@ -102,37 +109,43 @@ exports.submitFinalEvaluation = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'You are not authorized to evaluate this copy.' });
     }
 
-    // Backend mode enforcement: Evaluator cannot submit manual marks in AI mode
-    if (req.user.role === 'EVALUATOR' && copy.examination?.evaluationModeLocked && copy.examination?.evaluationMode === 'AI_ASSISTED') {
-      return res.status(400).json({
-        success: false,
-        message: 'This examination is locked in AI-Assisted Evaluation mode. Manual marks cannot be entered. Please review AI marking and click Approve.'
-      });
-    }
-
-    // Strict validation
+    // Strict validation and normalization
     let calculatedTotal = 0;
     let maxPossible = 0;
+    const normalizedQuestionEvals = [];
 
     for (const qe of questionEvaluations || []) {
-      const awarded = Number(qe.marksAwarded);
-      const maxM = Number(qe.maxMarks) || 10;
+      const qNum = Number(qe.questionNumber);
+      const matchedAns = copy.answers?.find(
+        (a) => (a.question?._id || a.question)?.toString() === (qe.question?._id || qe.question || qe.questionId)?.toString() || a.questionNumber === qNum
+      );
+      const qId = qe.question || qe.questionId || (matchedAns && (matchedAns.question?._id || matchedAns.question)) || undefined;
+      const maxM = Number(qe.maxMarks || (matchedAns && matchedAns.maxMarks) || 10);
+      const awarded = Number(qe.marksAwarded ?? qe.finalMarks ?? 0);
 
       if (isNaN(awarded) || awarded < 0 || awarded > maxM) {
         return res.status(400).json({
           success: false,
-          message: `Validation failed: Marks for Question ${qe.questionNumber} (${awarded}) must be between 0 and ${maxM}.`
+          message: `Validation failed: Marks for Question ${qNum} (${awarded}) must be between 0 and ${maxM}.`
         });
       }
       calculatedTotal += awarded;
       maxPossible += maxM;
+
+      normalizedQuestionEvals.push({
+        ...qe,
+        question: qId,
+        questionNumber: qNum,
+        maxMarks: maxM,
+        marksAwarded: awarded
+      });
     }
 
     let evaluation = await Evaluation.findOne({ answerCopy: copy._id });
 
     if (evaluation) {
-      evaluation.questionEvaluations = questionEvaluations;
-      evaluation.evaluationMode = copy.examination?.evaluationMode || evaluationMode || copy.evaluationMode || 'MANUAL';
+      evaluation.questionEvaluations = normalizedQuestionEvals;
+      evaluation.evaluationMode = 'MANUAL';
       evaluation.totalMarks = calculatedTotal;
       evaluation.maxPossibleMarks = maxPossible;
       evaluation.percentage = maxPossible > 0 ? Math.round((calculatedTotal / maxPossible) * 100 * 10) / 10 : 0;
@@ -145,9 +158,9 @@ exports.submitFinalEvaluation = async (req, res, next) => {
         answerCopy: copy._id,
         examination: copy.examination._id,
         evaluator: req.user._id,
-        evaluationMode: copy.examination?.evaluationMode || evaluationMode || copy.evaluationMode || 'MANUAL',
+        evaluationMode: 'MANUAL',
         isDraft: false,
-        questionEvaluations,
+        questionEvaluations: normalizedQuestionEvals,
         totalMarks: calculatedTotal,
         maxPossibleMarks: maxPossible,
         percentage: maxPossible > 0 ? Math.round((calculatedTotal / maxPossible) * 100 * 10) / 10 : 0,
@@ -157,7 +170,7 @@ exports.submitFinalEvaluation = async (req, res, next) => {
     }
 
     // Update copy answers and status
-    for (const qe of questionEvaluations || []) {
+    for (const qe of normalizedQuestionEvals) {
       const qId = qe.question?._id || qe.question;
       const targetAns = copy.answers.find(a => (a.question?._id || a.question)?.toString() === qId?.toString() || a.questionNumber === qe.questionNumber);
       if (targetAns) {
@@ -169,6 +182,7 @@ exports.submitFinalEvaluation = async (req, res, next) => {
 
     copy.status = 'EVALUATED';
     copy.evaluationStatus = 'COMPLETED';
+    copy.evaluationMode = 'MANUAL';
     copy.finalTotal = calculatedTotal;
     copy.totalAwardedMarks = calculatedTotal;
     copy.totalMaxMarks = maxPossible;

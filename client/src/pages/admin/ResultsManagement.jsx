@@ -6,10 +6,11 @@ import Badge from '../../components/Badge';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../context/ToastContext';
-import { Award, Globe, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Award, Globe, CheckCircle2, AlertCircle, RefreshCw, UserCheck, Sparkles, FileText } from 'lucide-react';
 
 const ResultsManagement = () => {
   const [results, setResults] = useState([]);
+  const [evaluatedCopies, setEvaluatedCopies] = useState([]);
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -24,22 +25,38 @@ const ResultsManagement = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [resultsRes, examsRes] = await Promise.all([
-        api.get('/results'),
-        api.get('/examinations')
-      ]);
-
-      if (resultsRes.data.success) setResults(resultsRes.data.results || []);
+      const examsRes = await api.get('/examinations');
       if (examsRes.data.success) {
-        setExams(examsRes.data.examinations || []);
-        if (examsRes.data.examinations.length > 0) {
-          setSelectedExamId(examsRes.data.examinations[0]._id);
+        const loadedExams = examsRes.data.examinations || [];
+        setExams(loadedExams);
+        if (loadedExams.length > 0) {
+          const firstExamId = loadedExams[0]._id;
+          setSelectedExamId(firstExamId);
+          await fetchResultsForExam(firstExamId);
         }
       }
     } catch (err) {
-      showToast('Failed to load examination results', 'error');
+      showToast('Failed to load examinations', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedExamId) {
+      fetchResultsForExam(selectedExamId);
+    }
+  }, [selectedExamId]);
+
+  const fetchResultsForExam = async (examId) => {
+    try {
+      const res = await api.get(`/results?examinationId=${examId}`);
+      if (res.data.success) {
+        setResults(res.data.results || []);
+        setEvaluatedCopies(res.data.evaluatedCopies || []);
+      }
+    } catch (err) {
+      showToast('Error loading results for selected examination', 'error');
     }
   };
 
@@ -47,7 +64,11 @@ const ResultsManagement = () => {
     if (!selectedExamId) return;
 
     const exam = exams.find((e) => e._id === selectedExamId);
-    if (!window.confirm(`Are you sure you want to officially publish results for ${exam?.name}? Students will be able to view their marks and grades immediately.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to officially publish results for ${exam?.name} (${exam?.subject})? All ${evaluatedCopies.length} evaluated copies will be published immediately.`
+      )
+    ) {
       return;
     }
 
@@ -55,8 +76,14 @@ const ResultsManagement = () => {
       setPublishing(true);
       const res = await api.post(`/results/publish/${selectedExamId}`);
       if (res.data.success) {
-        showToast(`Results published successfully for ${res.data.publishedCount} students!`, 'success');
-        fetchInitialData();
+        showToast(
+          res.data.message || `Results published successfully for ${res.data.publishedCount} evaluated copies!`,
+          'success'
+        );
+        // Refresh exam list and current exam results
+        const examsRes = await api.get('/examinations');
+        if (examsRes.data.success) setExams(examsRes.data.examinations || []);
+        await fetchResultsForExam(selectedExamId);
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Error publishing results', 'error');
@@ -65,28 +92,40 @@ const ResultsManagement = () => {
     }
   };
 
-  const filteredResults = selectedExamId
-    ? results.filter((r) => r.examination?._id === selectedExamId)
-    : results;
+  const selectedExam = exams.find((e) => e._id === selectedExamId);
+  const isExamPublished = selectedExam?.status === 'RESULT_PUBLISHED';
 
-  const unpublishedCount = filteredResults.filter((r) => !r.published).length;
-  const publishedCount = filteredResults.filter((r) => r.published).length;
+  // Compute grade helper
+  const getGrade = (percentage) => {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C';
+    if (percentage >= 40) return 'D';
+    return 'F';
+  };
 
   return (
     <div>
       <PageHeader
         title="Examination Results & Official Publication"
-        subtitle="Review computed percentage, grades, and pass/fail statistics before authorizing public release to candidates."
+        subtitle="Review computed percentage, grades, and evaluated copy records before authorizing public release to candidates."
         breadcrumb="Academic Records"
         action={
-          <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchInitialData}>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={() => selectedExamId && fetchResultsForExam(selectedExamId)}
+          >
             Refresh
           </Button>
         }
       />
 
       {/* Control Banner */}
-      <div className="surface-card p-5 rounded-xl border border-slate-800 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="surface-card p-5 rounded-xl border border-slate-800 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-full md:w-auto">
           <label className="block text-xs font-semibold text-slate-400 mb-1">
             Filter by Examination
@@ -108,7 +147,17 @@ const ResultsManagement = () => {
           <div className="text-right text-xs">
             <span className="text-slate-400 block">Publication Status:</span>
             <span className="font-bold text-white">
-              {publishedCount} Published / <span className="text-amber-400">{unpublishedCount} Pending</span>
+              {isExamPublished ? (
+                <span className="text-emerald-400 flex items-center space-x-1 justify-end">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Result Published</span>
+                </span>
+              ) : (
+                <span className="text-amber-400 flex items-center space-x-1 justify-end">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Publication Pending</span>
+                </span>
+              )}
             </span>
           </div>
 
@@ -117,81 +166,206 @@ const ResultsManagement = () => {
             size="md"
             icon={Globe}
             loading={publishing}
-            disabled={unpublishedCount === 0}
+            disabled={evaluatedCopies.length === 0}
             onClick={handlePublishResults}
           >
-            Publish Results ({unpublishedCount})
+            {isExamPublished ? 'Re-Publish Results' : `Publish Result (${evaluatedCopies.length} Copies)`}
           </Button>
         </div>
       </div>
 
+      {/* Subject & Publication State Card */}
+      {selectedExam && (
+        <div className="surface-card p-4 rounded-xl border border-slate-800 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">Subject:</span>
+              <span className="text-sm font-bold text-indigo-400">{selectedExam.subject}</span>
+              <span className="text-xs text-slate-500 font-mono">({selectedExam.code})</span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">{selectedExam.name}</p>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono">
+              <span className="text-slate-400 mr-2">Total Evaluated:</span>
+              <span className="font-bold text-white">{evaluatedCopies.length}</span>
+            </div>
+            {isExamPublished ? (
+              <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Result Published</span>
+              </span>
+            ) : (
+              <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1.5">
+                <AlertCircle className="w-4 h-4" />
+                <span>Pending Publication</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading ? (
-        <LoadingSpinner fullPage text="Retrieving computed results..." />
-      ) : filteredResults.length === 0 ? (
+        <LoadingSpinner fullPage text="Retrieving computed results and evaluated copies..." />
+      ) : evaluatedCopies.length === 0 ? (
         <EmptyState
-          title="No evaluated results found"
-          message="Once faculty evaluators complete answer copy scoring, computed results will appear here for audit and publishing."
+          title="No evaluated answer copies found"
+          message="Once answer copies are evaluated through Manual Evaluation or AI Evaluation, they will appear here in the final result list."
         />
       ) : (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
+        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div className="p-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+              Evaluated Answer Copies ({evaluatedCopies.length} Total)
+            </h4>
+            <span className="text-xs text-slate-400 font-mono">
+              Subject: <strong className="text-indigo-400">{selectedExam?.subject}</strong>
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
                 <tr>
-                  <th className="py-3.5 px-4">Student</th>
-                  <th className="py-3.5 px-4">Roll Number</th>
-                  <th className="py-3.5 px-4">Marks Awarded</th>
+                  <th className="py-3.5 px-4">Copy No.</th>
+                  <th className="py-3.5 px-4">Student Information</th>
+                  <th className="py-3.5 px-4">Evaluation Mode</th>
+                  <th className="py-3.5 px-4">Marks Obtained</th>
                   <th className="py-3.5 px-4">Percentage</th>
                   <th className="py-3.5 px-4">Grade</th>
                   <th className="py-3.5 px-4">Outcome</th>
-                  <th className="py-3.5 px-4 text-right">Publication State</th>
+                  <th className="py-3.5 px-4 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {filteredResults.map((res) => (
-                  <tr key={res._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-4 font-semibold text-white">
-                      <div>{res.student?.name}</div>
-                      <span className="text-[10px] text-slate-500">{res.student?.email}</span>
-                    </td>
-                    <td className="py-4 px-4 font-mono text-slate-300">
-                      {res.student?.studentRollNo || '—'}
-                    </td>
-                    <td className="py-4 px-4 font-mono font-bold text-white">
-                      {res.totalMarks} / {res.maxMarks}
-                    </td>
-                    <td className="py-4 px-4 font-mono font-bold text-indigo-400">
-                      {res.percentage}%
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 font-bold font-mono text-sm text-white flex items-center justify-center">
-                        {res.grade}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      {res.passed ? (
-                        <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Passed</span>
+                {evaluatedCopies.map((copy) => {
+                  const marksObtained = copy.finalTotal ?? copy.totalAwardedMarks ?? 0;
+                  const totalMarks = copy.totalMaxMarks || selectedExam?.maxMarks || 100;
+                  const percentage =
+                    copy.percentage !== null && copy.percentage !== undefined
+                      ? copy.percentage
+                      : totalMarks > 0
+                      ? Math.round((marksObtained / totalMarks) * 100 * 10) / 10
+                      : 0;
+                  const grade = getGrade(percentage);
+                  const passingMarks = selectedExam?.passingMarks || Math.round(totalMarks * 0.4);
+                  const isPassed = marksObtained >= passingMarks;
+
+                  const isManual =
+                    copy.evaluationMode === 'MANUAL' || !!copy.assignedEvaluator;
+                  const studentName =
+                    copy.candidateName || copy.student?.name || '';
+                  const studentRoll =
+                    copy.candidateRollNo || copy.student?.studentRollNo || '';
+
+                  return (
+                    <tr key={copy._id} className="hover:bg-slate-800/30 transition-colors">
+                      {/* Copy Number */}
+                      <td className="py-4 px-4 font-mono font-bold text-white">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-indigo-400">{copy.copyId}</span>
+                          {copy.bookletNumber && (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              [{copy.bookletNumber}]
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Student Information */}
+                      <td className="py-4 px-4">
+                        {studentName ? (
+                          <div>
+                            <div className="font-semibold text-slate-200">{studentName}</div>
+                            {studentRoll && (
+                              <span className="text-[10px] font-mono text-slate-400">
+                                Roll: {studentRoll}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic">—</span>
+                        )}
+                      </td>
+
+                      {/* Evaluation Mode */}
+                      <td className="py-4 px-4">
+                        {isManual ? (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 inline-flex items-center space-x-1">
+                            <UserCheck className="w-3 h-3" />
+                            <span>Manual Check</span>
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 inline-flex items-center space-x-1">
+                            <Sparkles className="w-3 h-3" />
+                            <span>AI Check</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Marks Obtained / Total Marks */}
+                      <td className="py-4 px-4 font-mono font-bold text-white text-sm">
+                        {marksObtained} / {totalMarks}
+                      </td>
+
+                      {/* Percentage */}
+                      <td className="py-4 px-4 font-mono font-bold text-indigo-400">
+                        {percentage}%
+                      </td>
+
+                      {/* Grade */}
+                      <td className="py-4 px-4">
+                        <span className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 font-bold font-mono text-xs text-white flex items-center justify-center">
+                          {grade}
                         </span>
-                      ) : (
-                        <span className="text-rose-400 font-bold flex items-center space-x-1">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          <span>Failed</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      {res.published ? (
-                        <Badge status="PUBLISHED">Published</Badge>
-                      ) : (
-                        <Badge status="PENDING">Draft / Unreleased</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Outcome */}
+                      <td className="py-4 px-4">
+                        {isPassed ? (
+                          <span className="text-emerald-400 font-bold flex items-center space-x-1 text-xs">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Passed</span>
+                          </span>
+                        ) : (
+                          <span className="text-rose-400 font-bold flex items-center space-x-1 text-xs">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            <span>Failed</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Publication State */}
+                      <td className="py-4 px-4 text-right">
+                        {isExamPublished ? (
+                          <Badge status="PUBLISHED">Published</Badge>
+                        ) : (
+                          <Badge status="PENDING">Draft / Unreleased</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+
+          {/* Footer Summary: Total Evaluated Copies */}
+          <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2 text-slate-300">
+              <FileText className="w-4 h-4 text-indigo-400" />
+              <span className="font-semibold">
+                Total Evaluated Copies: <strong className="text-white font-mono text-sm">{evaluatedCopies.length}</strong>
+              </span>
+              <span className="text-slate-500">
+                (Evaluated via Manual Check & AI Check)
+              </span>
+            </div>
+
+            <div className="text-slate-400 font-mono">
+              Subject: <strong className="text-indigo-400">{selectedExam?.subject}</strong>
+            </div>
           </div>
         </div>
       )}

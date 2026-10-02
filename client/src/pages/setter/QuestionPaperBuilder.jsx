@@ -190,9 +190,12 @@ const QuestionPaperBuilder = () => {
         showToast('Question paper saved successfully!', 'success');
         setActivePaperId(res.data.questionPaper._id);
         setPaperStatus(res.data.questionPaper.status);
-        // Refresh
-        const refreshPapers = await api.get('/question-papers');
-        if (refreshPapers.data.success) setExistingPapers(refreshPapers.data.questionPapers || []);
+        const [refreshPapers, refreshExams] = await Promise.all([
+          api.get('/question-papers'),
+          api.get('/examinations')
+        ]);
+        if (refreshPapers.data?.success) setExistingPapers(refreshPapers.data.questionPapers || []);
+        if (refreshExams.data?.success) setExams(refreshExams.data.examinations || []);
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Error saving question paper', 'error');
@@ -202,6 +205,16 @@ const QuestionPaperBuilder = () => {
   };
 
   const handleSubmitForApproval = async () => {
+    if (!selectedExamId) {
+      showToast('Please select an active examination first.', 'warning');
+      return;
+    }
+
+    if (!selectedQuestions || selectedQuestions.length === 0) {
+      showToast('Please add questions to the paper before submitting.', 'error');
+      return;
+    }
+
     if (!isMarksMatching) {
       showToast(
         `Total marks (${currentTotalMarks}) must equal exam maximum marks (${examMaxMarks}) before submission.`,
@@ -210,27 +223,54 @@ const QuestionPaperBuilder = () => {
       return;
     }
 
-    if (!activePaperId) {
-      showToast('Please save your paper draft first before submission.', 'warning');
-      return;
-    }
-
-    if (!window.confirm('Submit this question paper for formal administrative review and approval?')) return;
-
     try {
       setSubmitting(true);
-      const res = await api.post(`/question-papers/${activePaperId}/submit`, {
-        comments: 'Ready for administrative approval and conduct scheduling.'
+
+      const payload = {
+        examinationId: selectedExamId,
+        paperTitle,
+        instructions,
+        questions: selectedQuestions.map((q, idx) => ({
+          question: q.questionId,
+          questionNumber: idx + 1,
+          marks: Number(q.marks),
+          customInstruction: q.customInstruction || ''
+        }))
+      };
+
+      // 1. Auto-save current state first so MongoDB has the exact latest questions and marks
+      let paperId = activePaperId;
+      const saveUrl = paperId ? `/question-papers/${paperId}` : '/question-papers';
+      const saveRes = await api({
+        method: paperId ? 'put' : 'post',
+        url: saveUrl,
+        data: payload
+      });
+
+      if (saveRes.data?.success && saveRes.data?.questionPaper?._id) {
+        paperId = saveRes.data.questionPaper._id;
+        setActivePaperId(paperId);
+      }
+
+      // 2. Submit for Admin review
+      const submitTargetId = paperId || selectedExamId;
+      const res = await api.post(`/question-papers/${submitTargetId}/submit`, {
+        comments: 'Ready for administrative approval and conduct scheduling.',
+        ...payload
       });
 
       if (res.data.success) {
         showToast('Question paper submitted for admin approval!', 'success');
         setPaperStatus('SUBMITTED');
-        const refreshPapers = await api.get('/question-papers');
-        if (refreshPapers.data.success) setExistingPapers(refreshPapers.data.questionPapers || []);
+        const [refreshPapers, refreshExams] = await Promise.all([
+          api.get('/question-papers'),
+          api.get('/examinations')
+        ]);
+        if (refreshPapers.data?.success) setExistingPapers(refreshPapers.data.questionPapers || []);
+        if (refreshExams.data?.success) setExams(refreshExams.data.examinations || []);
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error submitting question paper', 'error');
+      showToast(err.response?.data?.message || err.message || 'Error submitting question paper', 'error');
     } finally {
       setSubmitting(false);
     }

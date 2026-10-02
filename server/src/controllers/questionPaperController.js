@@ -48,9 +48,19 @@ exports.getQuestionPaperById = async (req, res, next) => {
 exports.createOrUpdateQuestionPaper = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { examinationId, paperTitle, instructions, questions } = req.body;
+    const targetExamId = req.body.examinationId || req.body.examination || req.body.examId || (req.body.examination && req.body.examination._id);
+    const { paperTitle, instructions, questions } = req.body;
 
-    const exam = await Examination.findById(examinationId || (req.body.examination && req.body.examination._id));
+    let exam;
+    if (targetExamId) {
+      exam = await Examination.findById(targetExamId);
+    } else if (id) {
+      const existing = await QuestionPaper.findById(id);
+      if (existing && existing.examination) {
+        exam = await Examination.findById(existing.examination);
+      }
+    }
+
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Associated examination not found' });
     }
@@ -80,18 +90,35 @@ exports.createOrUpdateQuestionPaper = async (req, res, next) => {
       paper.totalMarks = totalMarks;
       await paper.save();
     } else {
-      paper = await QuestionPaper.create({
-        examination: exam._id,
-        paperTitle: paperTitle || `${exam.name} - Question Paper`,
-        instructions: instructions || [
-          'Attempt all questions in order.',
-          'Answer thoroughly with relevant examples where applicable.'
-        ],
-        questions,
-        totalMarks,
-        status: 'DRAFT',
-        submittedBy: req.user._id
-      });
+      // Check if paper already exists for this examination
+      const existingPaper = await QuestionPaper.findOne({ examination: exam._id });
+      if (existingPaper) {
+        if (existingPaper.status === 'APPROVED') {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot modify an approved question paper unless a revision is requested.'
+          });
+        }
+        existingPaper.paperTitle = paperTitle || existingPaper.paperTitle;
+        existingPaper.instructions = instructions || existingPaper.instructions;
+        existingPaper.questions = questions;
+        existingPaper.totalMarks = totalMarks;
+        await existingPaper.save();
+        paper = existingPaper;
+      } else {
+        paper = await QuestionPaper.create({
+          examination: exam._id,
+          paperTitle: paperTitle || `${exam.name} - Question Paper`,
+          instructions: instructions || [
+            'Attempt all questions in order.',
+            'Answer thoroughly with relevant examples where applicable.'
+          ],
+          questions,
+          totalMarks,
+          status: 'DRAFT',
+          submittedBy: req.user._id
+        });
+      }
     }
 
     await logAudit({
@@ -115,9 +142,24 @@ exports.createOrUpdateQuestionPaper = async (req, res, next) => {
 // Submit question paper for Admin review
 exports.submitQuestionPaper = async (req, res, next) => {
   try {
-    const paper = await QuestionPaper.findById(req.params.id).populate('examination');
+    let paper = await QuestionPaper.findById(req.params.id).populate('examination');
+    if (!paper) {
+      paper = await QuestionPaper.findOne({ examination: req.params.id }).populate('examination');
+    }
     if (!paper) {
       return res.status(404).json({ success: false, message: 'Question paper not found' });
+    }
+
+    // Sync questions/marks if provided in submit body
+    if (Array.isArray(req.body.questions) && req.body.questions.length > 0) {
+      paper.questions = req.body.questions;
+      paper.totalMarks = req.body.questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
+    }
+    if (req.body.paperTitle) {
+      paper.paperTitle = req.body.paperTitle;
+    }
+    if (Array.isArray(req.body.instructions)) {
+      paper.instructions = req.body.instructions;
     }
 
     if (paper.totalMarks !== paper.examination.maxMarks) {
@@ -130,6 +172,9 @@ exports.submitQuestionPaper = async (req, res, next) => {
     paper.status = 'SUBMITTED';
     paper.submittedBy = req.user._id;
     paper.submittedAt = new Date();
+    if (!Array.isArray(paper.approvalHistory)) {
+      paper.approvalHistory = [];
+    }
     paper.approvalHistory.push({
       action: paper.approvalHistory.some((h) => h.action === 'REJECTED') ? 'RESUBMITTED' : 'SUBMITTED',
       performedBy: req.user._id,
@@ -172,12 +217,25 @@ exports.submitQuestionPaper = async (req, res, next) => {
 // Admin Approve or Reject Question Paper
 exports.reviewQuestionPaper = async (req, res, next) => {
   try {
-    const { action, comments, scheduledDate } = req.body; // 'APPROVE' or 'REJECT'
-    const paper = await QuestionPaper.findById(req.params.id).populate('examination').populate('submittedBy');
+    const action = (req.body.action || req.body.decision || '').toUpperCase(); // 'APPROVE' or 'REJECT'
+    const comments = req.body.comments || req.body.remarks || req.body.reason || '';
+    const scheduledDate = req.body.scheduledDate;
+    let paper = await QuestionPaper.findById(req.params.id).populate('examination').populate('submittedBy');
+    if (!paper) {
+      paper = await QuestionPaper.findOne({ examination: req.params.id }).populate('examination').populate('submittedBy');
+    }
 
     if (!paper) {
       return res.status(404).json({ success: false, message: 'Question paper not found' });
     }
+
+    if (!Array.isArray(paper.approvalHistory)) {
+      paper.approvalHistory = [];
+    }
+
+    const examId = paper.examination?._id || paper.examination;
+    const examName = paper.examination?.name || 'Examination';
+    const setterUserId = paper.submittedBy?._id || paper.submittedBy;
 
     if (action === 'REJECT') {
       if (!comments || comments.trim() === '') {
@@ -198,15 +256,17 @@ exports.reviewQuestionPaper = async (req, res, next) => {
       });
       await paper.save();
 
-      await Examination.findByIdAndUpdate(paper.examination._id, {
-        status: 'PAPER_REJECTED'
-      });
+      if (examId) {
+        await Examination.findByIdAndUpdate(examId, {
+          status: 'PAPER_REJECTED'
+        });
+      }
 
-      if (paper.submittedBy) {
+      if (setterUserId) {
         await createNotification({
-          recipient: paper.submittedBy._id,
+          recipient: setterUserId,
           title: 'Question Paper Revision Required',
-          message: `Your question paper for "${paper.examination.name}" was rejected. Feedback: ${comments}`,
+          message: `Your question paper for "${examName}" was rejected. Feedback: ${comments}`,
           type: 'WARNING',
           link: '/setter/question-papers'
         });
@@ -224,16 +284,18 @@ exports.reviewQuestionPaper = async (req, res, next) => {
       await paper.save();
 
       // Update exam to PAPER_APPROVED or SCHEDULED
-      await Examination.findByIdAndUpdate(paper.examination._id, {
-        status: scheduledDate ? 'SCHEDULED' : 'PAPER_APPROVED',
-        approvedQuestionPaper: paper._id
-      });
+      if (examId) {
+        await Examination.findByIdAndUpdate(examId, {
+          status: scheduledDate ? 'SCHEDULED' : 'PAPER_APPROVED',
+          approvedQuestionPaper: paper._id
+        });
+      }
 
-      if (paper.submittedBy) {
+      if (setterUserId) {
         await createNotification({
-          recipient: paper.submittedBy._id,
+          recipient: setterUserId,
           title: 'Question Paper Approved',
-          message: `Your question paper for "${paper.examination.name}" has been approved!`,
+          message: `Your question paper for "${examName}" has been approved!`,
           type: 'SUCCESS',
           link: '/setter/question-papers'
         });
@@ -244,7 +306,7 @@ exports.reviewQuestionPaper = async (req, res, next) => {
 
     await logAudit({
       req,
-      action: `QUESTION_PAPER_${action}D`,
+      action: action === 'APPROVE' ? 'QUESTION_PAPER_APPROVED' : 'QUESTION_PAPER_REJECTED',
       entity: 'QuestionPaper',
       entityId: paper._id,
       details: { action, comments }

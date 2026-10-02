@@ -158,7 +158,7 @@ exports.assignCopiesToEvaluator = async (req, res, next) => {
         copy.assignedEvaluator = evaluatorUser._id;
         copy.assignedAt = new Date();
         copy.evaluationStatus = 'ASSIGNED';
-        copy.evaluationMode = exam.evaluationMode || copy.evaluationMode || 'MANUAL';
+        copy.evaluationMode = 'MANUAL';
         await copy.save();
         updatedCopies.push(copy._id);
       }

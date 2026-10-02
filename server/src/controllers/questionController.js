@@ -105,12 +105,19 @@ exports.createQuestion = async (req, res, next) => {
       questionText,
       questionType,
       options,
-      marks,
       difficulty,
-      expectedAnswer,
-      explanation,
-      rubricCriteria
+      explanation
     } = req.body;
+
+    const marks = Number(req.body.marks || req.body.maxMarks);
+    const expectedAnswer = (req.body.expectedAnswer || req.body.referenceAnswer || req.body.modelAnswer || '').trim();
+    const rawRubric = req.body.rubricCriteria || req.body.rubric;
+    const rubricCriteria = Array.isArray(rawRubric) ? rawRubric.map(r => ({
+      name: r.name || r.criteria || 'Criterion',
+      description: r.description || '',
+      maxMarks: Number(r.maxMarks || r.marks || 1),
+      keywords: Array.isArray(r.keywords) ? r.keywords : []
+    })) : null;
 
     if (!subject || !questionText || !marks || !expectedAnswer) {
       return res.status(400).json({

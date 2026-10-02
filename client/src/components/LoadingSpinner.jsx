@@ -1,17 +1,22 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
-const LoadingSpinner = ({ text = 'Loading system data...', fullPage = false }) => {
+const LoadingSpinner = ({ text = 'Gathering platform telemetry...', fullPage = false }) => {
   const content = (
-    <div className="flex flex-col items-center justify-center space-y-3">
-      <Loader2 className="w-9 h-9 animate-spin text-indigo-500" />
-      {text && <p className="text-sm font-medium text-slate-400">{text}</p>}
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="relative flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center shadow-lg shadow-indigo-950/60">
+          <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+        </div>
+        <Loader2 className="absolute -inset-1.5 w-15 h-15 animate-spin text-indigo-500/60" />
+      </div>
+      {text && <p className="text-xs sm:text-sm font-medium text-slate-400 tracking-tight">{text}</p>}
     </div>
   );
 
   if (fullPage) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center w-full">
+      <div className="min-h-[55vh] flex items-center justify-center w-full">
         {content}
       </div>
     );
