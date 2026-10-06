@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import Button from '../../components/Button';
@@ -7,14 +8,40 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../context/ToastContext';
-import { FileText, Plus, Trash2, ArrowUp, ArrowDown, Send, Eye, CheckCircle2, AlertCircle, Sparkles, RefreshCw, Edit3 } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Send,
+  Eye,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  RefreshCw,
+  Edit3,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  HelpCircle
+} from 'lucide-react';
 
 const QuestionPaperBuilder = () => {
+  const [searchParams] = useSearchParams();
+  const examIdParam = searchParams.get('examId');
+
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState('');
   const [questionBank, setQuestionBank] = useState([]);
   const [existingPapers, setExistingPapers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Assigned Syllabus Reference State ("Manual Syllabus Dekhke")
+  const [assignedSyllabus, setAssignedSyllabus] = useState(null);
+  const [syllabusLoading, setSyllabusLoading] = useState(false);
+  const [showSyllabusRef, setShowSyllabusRef] = useState(true);
 
   // Active builder paper
   const [activePaperId, setActivePaperId] = useState(null);
@@ -40,6 +67,16 @@ const QuestionPaperBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Custom Question Modal (Manual creation mapped to syllabus)
+  const [customQuestionModalOpen, setCustomQuestionModalOpen] = useState(false);
+  const [customQText, setCustomQText] = useState('');
+  const [customQUnit, setCustomQUnit] = useState('');
+  const [customQTopic, setCustomQTopic] = useState('');
+  const [customQMarks, setCustomQMarks] = useState(10);
+  const [customQDifficulty, setCustomQDifficulty] = useState('MEDIUM');
+  const [customQExpectedAnswer, setCustomQExpectedAnswer] = useState('');
+  const [savingCustomQ, setSavingCustomQ] = useState(false);
+
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -56,9 +93,12 @@ const QuestionPaperBuilder = () => {
       ]);
 
       if (examsRes.data.success) {
-        setExams(examsRes.data.examinations || []);
-        if (examsRes.data.examinations.length > 0) {
-          setSelectedExamId(examsRes.data.examinations[0]._id);
+        const loadedExams = examsRes.data.examinations || [];
+        setExams(loadedExams);
+        if (examIdParam && loadedExams.some((e) => e._id === examIdParam)) {
+          setSelectedExamId(examIdParam);
+        } else if (loadedExams.length > 0) {
+          setSelectedExamId(loadedExams[0]._id);
         }
       }
       if (qRes.data.success) setQuestionBank(qRes.data.questions || []);
@@ -73,8 +113,30 @@ const QuestionPaperBuilder = () => {
   useEffect(() => {
     if (selectedExamId) {
       loadPaperForExam(selectedExamId);
+      fetchAssignedSyllabusForExam(selectedExamId);
     }
   }, [selectedExamId, existingPapers]);
+
+  const fetchAssignedSyllabusForExam = async (examId) => {
+    try {
+      setSyllabusLoading(true);
+      const res = await api.get(`/syllabus/exam/${examId}`);
+      if (res.data.success && res.data.syllabus) {
+        setAssignedSyllabus(res.data.syllabus);
+      } else {
+        const ex = exams.find((e) => e._id === examId);
+        if (ex?.assignedSyllabus && typeof ex.assignedSyllabus === 'object') {
+          setAssignedSyllabus(ex.assignedSyllabus);
+        } else {
+          setAssignedSyllabus(null);
+        }
+      }
+    } catch (err) {
+      setAssignedSyllabus(null);
+    } finally {
+      setSyllabusLoading(false);
+    }
+  };
 
   const loadPaperForExam = (examId) => {
     const exam = exams.find((e) => e._id === examId);
@@ -108,11 +170,56 @@ const QuestionPaperBuilder = () => {
     }
   };
 
+  const handleCreateCustomQuestion = async (e) => {
+    e.preventDefault();
+    if (!customQText.trim()) {
+      showToast('Question text is required', 'error');
+      return;
+    }
+    try {
+      setSavingCustomQ(true);
+      const chosenUnit = customQUnit || assignedSyllabus?.units?.[0]?.title || 'Unit 1';
+      const res = await api.post('/questions', {
+        subject: selectedExam?.subject,
+        examination: selectedExamId,
+        unit: chosenUnit,
+        topic: customQTopic.trim() || 'Core Concept',
+        questionText: customQText.trim(),
+        questionType: 'DESCRIPTIVE',
+        difficulty: customQDifficulty,
+        marks: Number(customQMarks) || 10,
+        expectedAnswer: customQExpectedAnswer.trim()
+      });
+
+      if (res.data.success && res.data.question) {
+        const newQ = res.data.question;
+        setSelectedQuestions([
+          ...selectedQuestions,
+          {
+            questionId: newQ._id,
+            question: newQ,
+            marks: newQ.marks,
+            customInstruction: ''
+          }
+        ]);
+        showToast('Custom question added to paper!', 'success');
+        setCustomQuestionModalOpen(false);
+        setCustomQText('');
+        setCustomQTopic('');
+        setCustomQExpectedAnswer('');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error creating custom question', 'error');
+    } finally {
+      setSavingCustomQ(false);
+    }
+  };
+
   const selectedExam = exams.find((e) => e._id === selectedExamId);
   const currentTotalMarks = selectedQuestions.reduce((acc, q) => acc + (Number(q.marks) || 0), 0);
   const examMaxMarks = selectedExam?.maxMarks || 50;
   const isMarksMatching = currentTotalMarks === examMaxMarks;
-  const isPaperLocked = paperStatus === 'APPROVED' || paperStatus === 'SUBMITTED';
+  const isPaperLocked = false;
 
   const availableSubjects = Array.from(
     new Set(questionBank.map((q) => q.subject).filter(Boolean))
@@ -355,17 +462,14 @@ const QuestionPaperBuilder = () => {
         breadcrumb="Exam Authoring"
         action={
           <div className="flex items-center space-x-2">
-            {!isPaperLocked && (
-              <Button
-                variant="outline"
-                icon={Sparkles}
-                loading={generatingAi}
-                onClick={handleGenerateAiPaper}
-                className="text-amber-300 border-amber-500/40 hover:bg-amber-500/10"
-              >
-                Generate Paper with AI
-              </Button>
-            )}
+            <Button
+              variant="ai"
+              icon={Sparkles}
+              loading={generatingAi}
+              onClick={handleGenerateAiPaper}
+            >
+              Generate Paper with AI
+            </Button>
             <Button
               variant="outline"
               icon={Eye}
@@ -374,34 +478,30 @@ const QuestionPaperBuilder = () => {
             >
               Preview
             </Button>
-            {!isPaperLocked && (
-              <>
-                <Button variant="secondary" loading={saving} onClick={handleSaveDraft}>
-                  Save Draft
-                </Button>
-                <Button
-                  variant="primary"
-                  icon={Send}
-                  loading={submitting}
-                  disabled={!isMarksMatching || selectedQuestions.length === 0}
-                  onClick={handleSubmitForApproval}
-                >
-                  Submit for Approval
-                </Button>
-              </>
-            )}
+            <Button variant="secondary" loading={saving} onClick={handleSaveDraft}>
+              Save Draft
+            </Button>
+            <Button
+              variant="primary"
+              icon={Send}
+              loading={submitting}
+              disabled={!isMarksMatching || selectedQuestions.length === 0}
+              onClick={handleSubmitForApproval}
+            >
+              Submit for Approval
+            </Button>
           </div>
         }
       />
 
       {/* Select Examination Bar */}
-      <div className="surface-card p-4 rounded-xl border border-slate-800 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-full md:w-auto">
-          <label className="block text-xs font-semibold text-slate-400 mb-1">Active Examination</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Active Examination</label>
           <select
             value={selectedExamId}
             onChange={(e) => setSelectedExamId(e.target.value)}
-            className="w-full md:w-96 bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 font-semibold"
+            className="w-full md:w-96 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-semibold"
           >
             {exams.map((ex) => (
               <option key={ex._id} value={ex._id}>
@@ -413,10 +513,10 @@ const QuestionPaperBuilder = () => {
 
         <div className="flex items-center space-x-4">
           <div className="text-right text-xs">
-            <span className="text-slate-400 block">Total Marks / Requirement:</span>
+            <span className="text-slate-500 block font-medium">Total Marks / Requirement:</span>
             <span
               className={`text-base font-bold font-mono ${
-                isMarksMatching ? 'text-emerald-400' : 'text-amber-400'
+                isMarksMatching ? 'text-emerald-600' : 'text-amber-700'
               }`}
             >
               {currentTotalMarks} / {examMaxMarks} marks
@@ -428,116 +528,243 @@ const QuestionPaperBuilder = () => {
 
       {/* Rejection Alert if applicable */}
       {rejectionNotes && paperStatus === 'REJECTED' && (
-        <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start space-x-3 text-xs">
-          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start space-x-3 text-xs">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-rose-300">Admin Rejection Feedback - Revision Required:</p>
-            <p className="text-rose-200/90 mt-1 leading-relaxed">{rejectionNotes}</p>
-            <p className="text-[11px] text-rose-400/80 mt-2">
+            <p className="font-bold text-rose-800">Admin Rejection Feedback - Revision Required:</p>
+            <p className="text-rose-700 mt-1 leading-relaxed">{rejectionNotes}</p>
+            <p className="text-[11px] text-rose-600 mt-2">
               Modify the question selections below, save, and resubmit for approval.
             </p>
           </div>
         </div>
       )}
 
+      {/* ASSIGNED SYLLABUS REFERENCE PANEL */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h4 className="text-sm font-bold text-slate-900 tracking-tight">
+                  Assigned Syllabus Reference
+                </h4>
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Admin Assigned
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Reference the official course syllabus below to assemble your question paper manually ("Syllabus Dekhke").
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <Link to={`/setter/syllabus/${selectedExamId}`}>
+              <Button variant="outline" size="sm" icon={Layers} className="text-xs">
+                View Scheme / Blueprint
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSyllabusRef(!showSyllabusRef)}
+            >
+              {showSyllabusRef ? 'Hide Syllabus' : 'View Syllabus'}
+            </Button>
+          </div>
+        </div>
+
+        {showSyllabusRef && (
+          <>
+            {syllabusLoading ? (
+              <div className="py-4 text-center text-xs text-slate-500">
+                Loading assigned syllabus...
+              </div>
+            ) : !assignedSyllabus || !assignedSyllabus.units || assignedSyllabus.units.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center space-x-3">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>No official syllabus assigned by Admin yet for this examination.</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {assignedSyllabus.units.map((unit, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2 hover:border-slate-300 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        Unit {unit.unitNumber || idx + 1}
+                      </span>
+                      {!isPaperLocked && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomQUnit(unit.title);
+                            setCustomQuestionModalOpen(true);
+                          }}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold"
+                        >
+                          + Write Q
+                        </button>
+                      )}
+                    </div>
+
+                    <h5 className="font-bold text-xs text-slate-900 line-clamp-1">
+                      {unit.title}
+                    </h5>
+
+                    {unit.description && (
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                        {unit.description}
+                      </p>
+                    )}
+
+                    {Array.isArray(unit.topics) && unit.topics.length > 0 && (
+                      <div className="pt-1 flex flex-wrap gap-1">
+                        {unit.topics.slice(0, 3).map((t, tIdx) => (
+                          <span
+                            key={tIdx}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-white text-slate-700 font-mono border border-slate-200"
+                          >
+                            {typeof t === 'string' ? t : t.title}
+                          </span>
+                        ))}
+                        {unit.topics.length > 3 && (
+                          <span className="text-[9px] px-1 py-0.5 text-slate-400">
+                            +{unit.topics.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Paper Header Inputs */}
-      <div className="surface-card p-5 rounded-xl border border-slate-800 mb-6 space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm mb-6 space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1">Question Paper Title</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Question Paper Title</label>
           <input
             type="text"
             disabled={isPaperLocked}
             value={paperTitle}
             onChange={(e) => setPaperTitle(e.target.value)}
-            className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 font-bold"
+            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-bold"
           />
         </div>
       </div>
 
       {/* Questions Arrangement Panel */}
-      <div className="surface-card rounded-xl border border-slate-800 overflow-hidden mb-8">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+        <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-bold text-white tracking-tight">
+            <h4 className="text-sm font-bold text-slate-900 tracking-tight">
               Selected Questions ({selectedQuestions.length})
             </h4>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Arrange questions in examination sequence and define question-specific notes.
             </p>
           </div>
 
-          {!isPaperLocked && (
+          <div className="flex items-center space-x-2">
             <Button
               variant="outline"
+              size="sm"
+              icon={Plus}
+              onClick={() => {
+                setCustomQUnit(assignedSyllabus?.units?.[0]?.title || 'Unit 1');
+                setCustomQuestionModalOpen(true);
+              }}
+            >
+              Write Custom Question
+            </Button>
+            <Button
+              variant="primary"
               size="sm"
               icon={Plus}
               onClick={handleOpenPicker}
             >
               Add from Question Bank
             </Button>
-          )}
+          </div>
         </div>
 
         {selectedQuestions.length === 0 ? (
           <EmptyState
             title="No questions added to paper"
-            message="Click 'Generate Paper with AI' to automatically generate questions strictly from the syllabus, or pick questions manually from the bank."
+            message="Reference the assigned syllabus above and assemble your paper by generating with AI, writing custom questions, or picking from the bank."
             action={
-              !isPaperLocked && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    variant="primary"
-                    icon={Sparkles}
-                    loading={generatingAi}
-                    onClick={handleGenerateAiPaper}
-                    className="bg-amber-600 hover:bg-amber-500 text-white"
-                  >
-                    Generate Paper with AI
-                  </Button>
-                  <Button variant="outline" icon={Plus} onClick={handleOpenPicker}>
-                    Pick Questions Manually
-                  </Button>
-                </div>
-              )
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  variant="ai"
+                  icon={Sparkles}
+                  loading={generatingAi}
+                  onClick={handleGenerateAiPaper}
+                >
+                  Generate Paper with AI
+                </Button>
+                <Button
+                  variant="outline"
+                  icon={Plus}
+                  onClick={() => {
+                    setCustomQUnit(assignedSyllabus?.units?.[0]?.title || 'Unit 1');
+                    setCustomQuestionModalOpen(true);
+                  }}
+                >
+                  Write Custom Question
+                </Button>
+                <Button variant="outline" icon={Plus} onClick={handleOpenPicker}>
+                  Pick from Question Bank
+                </Button>
+              </div>
             }
           />
         ) : (
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-slate-100">
             {selectedQuestions.map((item, idx) => (
-              <div key={idx} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-800/20 transition-colors">
+              <div key={idx} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
                 <div className="flex items-center space-x-3 flex-1">
-                  {!isPaperLocked && (
-                    <div className="flex flex-col space-y-1">
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => moveQuestion(idx, 'up')}
-                        className="text-slate-500 hover:text-white disabled:opacity-20"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === selectedQuestions.length - 1}
-                        onClick={() => moveQuestion(idx, 'down')}
-                        className="text-slate-500 hover:text-white disabled:opacity-20"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex flex-col space-y-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveQuestion(idx, 'up')}
+                      className="text-slate-400 hover:text-slate-700 disabled:opacity-20 transition-colors"
+                      title="Move Question Up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === selectedQuestions.length - 1}
+                      onClick={() => moveQuestion(idx, 'down')}
+                      className="text-slate-400 hover:text-slate-700 disabled:opacity-20 transition-colors"
+                      title="Move Question Down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
-                  <span className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-100">
                     Q{idx + 1}
                   </span>
 
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-white leading-snug">
+                    <p className="text-xs font-semibold text-slate-900 leading-snug">
                       {item.question?.questionText || 'Question item'}
                     </p>
-                    <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1 font-mono">
+                    <div className="flex items-center space-x-2 text-[10px] text-slate-500 mt-1 font-mono">
                       {item.question?.subject && (
-                        <span className="text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 font-semibold">
+                        <span className="text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold">
                           {item.question.subject}
                         </span>
                       )}
@@ -552,41 +779,39 @@ const QuestionPaperBuilder = () => {
 
                 <div className="flex items-center space-x-2 shrink-0">
                   <div className="flex items-center space-x-1 text-xs">
-                    <span className="text-slate-400">Marks:</span>
+                    <span className="text-slate-500">Marks:</span>
                     <input
                       type="number"
                       min="1"
-                      disabled={isPaperLocked}
                       value={item.marks}
                       onChange={(e) => {
                         const updated = [...selectedQuestions];
                         updated[idx].marks = Number(e.target.value);
                         setSelectedQuestions(updated);
                       }}
-                      className="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-400 font-mono font-bold text-center focus:outline-none focus:border-indigo-500"
+                      className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-indigo-600 font-mono font-bold text-center focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                     />
                   </div>
 
-                  {!isPaperLocked && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={RefreshCw}
-                        loading={regeneratingIdx === idx}
-                        onClick={() => handleRegenerateQuestionInPaper(idx)}
-                        className="text-[10px] text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 p-1.5"
-                        title="Regenerate this question with Gemini AI"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeQuestionFromPaper(idx)}
-                        className="text-slate-500 hover:text-rose-400 p-1.5"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
+                  <div className="flex items-center space-x-1.5">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={RefreshCw}
+                      loading={regeneratingIdx === idx}
+                      onClick={() => handleRegenerateQuestionInPaper(idx)}
+                      className="text-[10px] text-amber-700 hover:text-amber-800 hover:bg-amber-50 p-1.5"
+                      title="Regenerate this question with Gemini AI"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeQuestionFromPaper(idx)}
+                      className="p-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                      title="Remove Question"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -603,12 +828,12 @@ const QuestionPaperBuilder = () => {
       >
         <div className="space-y-4">
           {/* Step 1: Select Subject */}
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-200">
+              <span className="text-xs font-semibold text-slate-800">
                 1. Select Subject:
               </span>
-              <span className="text-[11px] text-indigo-400 font-mono">
+              <span className="text-[11px] text-indigo-600 font-mono">
                 Active Subject: <strong>{pickerSubjectFilter || 'All'}</strong>
               </span>
             </div>
@@ -619,10 +844,10 @@ const QuestionPaperBuilder = () => {
                   key={subj}
                   type="button"
                   onClick={() => setPickerSubjectFilter(subj)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     pickerSubjectFilter === subj
-                      ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-slate-700/40'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
                   }`}
                 >
                   {subj}
@@ -634,10 +859,10 @@ const QuestionPaperBuilder = () => {
           {/* Step 2: Select Questions from Chosen Subject */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-slate-700">
                 2. Select Questions for {pickerSubjectFilter || 'Paper'}:
               </span>
-              <span className="text-[11px] text-slate-400 font-mono">
+              <span className="text-[11px] text-slate-500 font-mono">
                 {questionBank.filter((q) => !pickerSubjectFilter || q.subject === pickerSubjectFilter).length} questions available
               </span>
             </div>
@@ -651,17 +876,17 @@ const QuestionPaperBuilder = () => {
                   return (
                     <div
                       key={q._id}
-                      className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3 text-xs hover:border-slate-700 transition-colors"
+                      className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs hover:border-slate-300 transition-colors"
                     >
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center space-x-2">
                           <Badge status={q.difficulty}>{q.difficulty}</Badge>
-                          <span className="text-indigo-400 font-mono font-semibold">{q.subject}</span>
-                          <span className="text-slate-500">•</span>
-                          <span className="text-slate-400 font-mono">{q.unit}</span>
-                          <span className="font-mono font-bold text-emerald-400">{q.marks} Marks</span>
+                          <span className="text-indigo-600 font-mono font-semibold">{q.subject}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-500 font-mono">{q.unit}</span>
+                          <span className="font-mono font-bold text-emerald-600">{q.marks} Marks</span>
                         </div>
-                        <p className="font-semibold text-white leading-snug">{q.questionText}</p>
+                        <p className="font-semibold text-slate-900 leading-snug">{q.questionText}</p>
                       </div>
 
                       <Button
@@ -677,7 +902,7 @@ const QuestionPaperBuilder = () => {
                 })}
 
               {questionBank.filter((q) => !pickerSubjectFilter || q.subject === pickerSubjectFilter).length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-xs">
+                <div className="p-8 text-center text-slate-400 text-xs">
                   No questions available in this subject repository yet.
                 </div>
               )}
@@ -694,19 +919,19 @@ const QuestionPaperBuilder = () => {
         maxWidth="max-w-4xl"
       >
         <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 text-xs">
-          <div className="text-center pb-4 border-b border-slate-800 space-y-1">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wider">{paperTitle}</h2>
-            <p className="text-slate-400">Course: {selectedExam?.course} (Sem {selectedExam?.semester}) | Subject: {selectedExam?.subject}</p>
-            <div className="flex justify-center space-x-6 text-[11px] font-mono text-slate-300 pt-1">
+          <div className="text-center pb-4 border-b border-slate-200 space-y-1">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider">{paperTitle}</h2>
+            <p className="text-slate-500">Course: {selectedExam?.course} (Sem {selectedExam?.semester}) | Subject: {selectedExam?.subject}</p>
+            <div className="flex justify-center space-x-6 text-[11px] font-mono text-slate-600 pt-1">
               <span>Time Allowed: {selectedExam?.durationMinutes} Minutes</span>
               <span>•</span>
               <span>Maximum Marks: {examMaxMarks}</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-            <p className="font-bold text-slate-300 uppercase tracking-wider mb-1 text-[11px]">General Instructions:</p>
-            <ol className="list-decimal list-inside text-slate-400 space-y-0.5">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+            <p className="font-bold text-slate-800 uppercase tracking-wider mb-1 text-[11px]">General Instructions:</p>
+            <ol className="list-decimal list-inside text-slate-600 space-y-0.5">
               {instructions.map((ins, i) => (
                 <li key={i}>{ins}</li>
               ))}
@@ -715,12 +940,12 @@ const QuestionPaperBuilder = () => {
 
           <div className="space-y-4">
             {selectedQuestions.map((item, i) => (
-              <div key={i} className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 space-y-1.5">
+              <div key={i} className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200 space-y-1.5">
                 <div className="flex justify-between items-start">
-                  <span className="font-bold text-white text-sm">
+                  <span className="font-bold text-slate-900 text-sm">
                     Q{i + 1}. {item.question?.questionText}
                   </span>
-                  <span className="font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 shrink-0 ml-3">
+                  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 shrink-0 ml-3">
                     [{item.marks}]
                   </span>
                 </div>
@@ -728,6 +953,109 @@ const QuestionPaperBuilder = () => {
             ))}
           </div>
         </div>
+      </Modal>
+
+      {/* Write Custom Question Modal ("Manual Creation Mapped to Syllabus") */}
+      <Modal
+        isOpen={customQuestionModalOpen}
+        onClose={() => setCustomQuestionModalOpen(false)}
+        title="Write Custom Question (Mapped to Syllabus)"
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleCreateCustomQuestion} className="space-y-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Syllabus Unit *</label>
+              <select
+                value={customQUnit}
+                onChange={(e) => setCustomQUnit(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-semibold"
+              >
+                {assignedSyllabus?.units && assignedSyllabus.units.length > 0 ? (
+                  assignedSyllabus.units.map((u, i) => (
+                    <option key={i} value={u.title}>
+                      Unit {u.unitNumber || i + 1}: {u.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="Unit 1">Unit 1: Core Principles</option>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Topic / Concept</label>
+              <input
+                type="text"
+                value={customQTopic}
+                onChange={(e) => setCustomQTopic(e.target.value)}
+                placeholder="e.g. Process Scheduling & IPC"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Marks *</label>
+              <input
+                type="number"
+                min="1"
+                max={examMaxMarks}
+                value={customQMarks}
+                onChange={(e) => setCustomQMarks(Number(e.target.value) || 1)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-indigo-600 font-mono font-bold text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Difficulty</label>
+              <select
+                value={customQDifficulty}
+                onChange={(e) => setCustomQDifficulty(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-semibold"
+              >
+                <option value="EASY">Easy</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HARD">Hard</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1">Question Text *</label>
+            <textarea
+              required
+              rows="4"
+              value={customQText}
+              onChange={(e) => setCustomQText(e.target.value)}
+              placeholder="Enter clear, academically rigorous question text according to the selected syllabus unit..."
+              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 leading-relaxed font-sans"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1">
+              Expected Scoring Model Answer (Optional):
+            </label>
+            <textarea
+              rows="3"
+              value={customQExpectedAnswer}
+              onChange={(e) => setCustomQExpectedAnswer(e.target.value)}
+              placeholder="Core points, key terms, or technical steps expected for evaluation..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 text-xs focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-mono"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200">
+            <Button variant="ghost" onClick={() => setCustomQuestionModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" loading={savingCustomQ} icon={Plus}>
+              Add to Question Paper
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -79,10 +79,22 @@ exports.saveDraftEvaluation = async (req, res, next) => {
       });
     }
 
+    // Update student answers if edited by evaluator
+    if (Array.isArray(req.body.studentAnswers)) {
+      for (const sa of req.body.studentAnswers) {
+        const target = copy.answers?.find((a) => a.questionNumber === Number(sa.questionNumber));
+        if (target && sa.studentAnswer !== undefined) {
+          target.studentAnswer = sa.studentAnswer;
+        }
+      }
+    }
+
     // Update copy status to IN_PROGRESS
     if (copy.evaluationStatus !== 'COMPLETED' && copy.evaluationStatus !== 'AI_APPROVED') {
       copy.evaluationStatus = 'IN_PROGRESS';
       copy.status = 'EVALUATION_IN_PROGRESS';
+      await copy.save();
+    } else {
       await copy.save();
     }
 
@@ -177,6 +189,15 @@ exports.submitFinalEvaluation = async (req, res, next) => {
         targetAns.marksAwarded = Number(qe.marksAwarded);
         targetAns.finalMarks = Number(qe.marksAwarded);
         targetAns.evaluatorRemarks = qe.comments || targetAns.evaluatorRemarks;
+      }
+    }
+
+    if (Array.isArray(req.body.studentAnswers)) {
+      for (const sa of req.body.studentAnswers) {
+        const target = copy.answers?.find((a) => a.questionNumber === Number(sa.questionNumber));
+        if (target && sa.studentAnswer !== undefined) {
+          target.studentAnswer = sa.studentAnswer;
+        }
       }
     }
 

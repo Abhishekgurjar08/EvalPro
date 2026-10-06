@@ -47,13 +47,13 @@ const AuditLogsView = () => {
       />
 
       {/* Filter Bar */}
-      <div className="surface-card p-4 rounded-xl border border-slate-800 mb-6 flex items-center justify-between">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Filter className="w-4 h-4 text-slate-400" />
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           >
             <option value="">All Security & Workflow Actions</option>
             <option value="USER_LOGIN">User Logins</option>
@@ -70,7 +70,7 @@ const AuditLogsView = () => {
             <option value="RESULTS_PUBLISHED">Results Published</option>
           </select>
         </div>
-        <span className="text-xs text-slate-400 font-mono">{logs.length} logged events</span>
+        <span className="text-xs text-slate-500 font-mono font-medium">{logs.length} logged events</span>
       </div>
 
       {loading ? (
@@ -81,10 +81,10 @@ const AuditLogsView = () => {
           message="System audit logs will automatically record security and operational activities here."
         />
       ) : (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Timestamp</th>
                   <th className="py-3.5 px-4">Actor / Role</th>
@@ -94,26 +94,26 @@ const AuditLogsView = () => {
                   <th className="py-3.5 px-4 text-right">IP Address</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300 font-mono">
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
                 {logs.map((log) => (
-                  <tr key={log._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-400 text-[11px]">
+                  <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 font-sans font-medium text-white">
+                    <td className="py-3.5 px-4 font-sans font-medium text-slate-900">
                       <div>{log.userName}</div>
-                      <span className="text-[10px] text-indigo-400 font-mono">{log.userRole}</span>
+                      <span className="text-[10px] text-indigo-600 font-mono font-semibold">{log.userRole}</span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-sans text-slate-300">{log.entity}</td>
-                    <td className="py-3.5 px-4 font-sans text-xs text-slate-400 max-w-md truncate">
+                    <td className="py-3.5 px-4 font-sans text-slate-800">{log.entity}</td>
+                    <td className="py-3.5 px-4 font-sans text-xs text-slate-500 max-w-md truncate">
                       {JSON.stringify(log.details)}
                     </td>
-                    <td className="py-3.5 px-4 text-right text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-right text-slate-400 text-[11px]">
                       {log.ipAddress || '127.0.0.1'}
                     </td>
                   </tr>

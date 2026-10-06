@@ -1,6 +1,7 @@
 const Examination = require('../models/Examination');
 const ExamSetterAssignment = require('../models/ExamSetterAssignment');
 const User = require('../models/User');
+const Syllabus = require('../models/Syllabus');
 const { logAudit } = require('../services/auditService');
 const { createNotification } = require('../services/notificationService');
 
@@ -28,6 +29,7 @@ exports.getExaminations = async (req, res, next) => {
     const total = await Examination.countDocuments(query);
     const examinations = await Examination.find(query)
       .populate('assignedSetter', 'name email employeeId department')
+      .populate('assignedSyllabus', 'subject units')
       .populate('approvedQuestionPaper', 'paperTitle totalMarks')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -49,6 +51,7 @@ exports.getExaminationById = async (req, res, next) => {
   try {
     const exam = await Examination.findById(req.params.id)
       .populate('assignedSetter', 'name email employeeId department')
+      .populate('assignedSyllabus')
       .populate('approvedQuestionPaper')
       .populate('createdBy', 'name email');
 
@@ -66,6 +69,7 @@ exports.getExaminationById = async (req, res, next) => {
     // Fetch assignment history
     const assignmentHistory = await ExamSetterAssignment.find({ examination: exam._id })
       .populate('setter', 'name email')
+      .populate('syllabus', 'subject units')
       .populate('assignedBy', 'name email')
       .sort({ createdAt: -1 });
 
@@ -219,7 +223,7 @@ exports.deleteExamination = async (req, res, next) => {
   }
 };
 
-// Assign Exam Setter
+// Assign Exam Setter (Step 1: Admin assigns Setter only)
 exports.assignSetter = async (req, res, next) => {
   try {
     const setterId = req.body.setterId || req.body.examSetterId || req.body.assignedSetter;
@@ -235,6 +239,7 @@ exports.assignSetter = async (req, res, next) => {
     }
 
     exam.assignedSetter = setter._id;
+    exam.assignedSyllabus = null; // Syllabus is assigned only after setter accepts
     exam.setterAssignmentDate = new Date();
     exam.status = 'SETTER_ASSIGNED';
     await exam.save();
@@ -269,6 +274,130 @@ exports.assignSetter = async (req, res, next) => {
       success: true,
       message: `Exam setter ${setter.name} assigned successfully.`,
       examination: exam
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Assign Syllabus (Step 2: Admin assigns Syllabus ONLY after Setter accepts)
+exports.assignSyllabus = async (req, res, next) => {
+  try {
+    const { syllabusId, units, newSyllabus } = req.body;
+    const exam = await Examination.findById(req.params.id);
+
+    if (!exam) {
+      return res.status(404).json({ success: false, message: 'Examination not found' });
+    }
+
+    if (!exam.assignedSetter) {
+      return res.status(400).json({
+        success: false,
+        message: 'A paper setter must be assigned and accepted before assigning syllabus.'
+      });
+    }
+
+    // STRICT VALIDATION: Syllabus can ONLY be assigned after setter has accepted
+    const allowedStatuses = ['SETTER_ACCEPTED', 'CONTENT_IN_PROGRESS', 'PAPER_SUBMITTED', 'PAPER_APPROVED', 'SCHEDULED', 'LIVE'];
+    if (!allowedStatuses.includes(exam.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Syllabus can only be assigned after the paper setter has accepted the exam assignment.'
+      });
+    }
+
+    let assignedSyllabusDoc = null;
+
+    if (syllabusId && syllabusId !== '__NEW__') {
+      assignedSyllabusDoc = await Syllabus.findById(syllabusId);
+      if (!assignedSyllabusDoc) {
+        return res.status(400).json({ success: false, message: 'Selected syllabus not found.' });
+      }
+      if (!assignedSyllabusDoc.examination) {
+        assignedSyllabusDoc.examination = exam._id;
+        await assignedSyllabusDoc.save();
+      }
+    } else if ((units && units.length > 0) || (newSyllabus && newSyllabus.units && newSyllabus.units.length > 0)) {
+      const rawUnits = units || newSyllabus.units;
+      const normalizedUnits = rawUnits.map((u, uIdx) => ({
+        unitNumber: Number(u.unitNumber) || (uIdx + 1),
+        title: u.title || `Unit ${uIdx + 1}`,
+        description: u.description || '',
+        topics: (u.topics || []).map((t, tIdx) => {
+          if (typeof t === 'string') {
+            return { topicNumber: tIdx + 1, title: t, description: '' };
+          }
+          return {
+            topicNumber: Number(t.topicNumber) || (tIdx + 1),
+            title: t.title || t.name || `Topic ${tIdx + 1}`,
+            description: t.description || ''
+          };
+        })
+      }));
+
+      let existingExamSyllabus = await Syllabus.findOne({ examination: exam._id });
+      if (existingExamSyllabus) {
+        existingExamSyllabus.subject = exam.subject;
+        existingExamSyllabus.units = normalizedUnits;
+        existingExamSyllabus.createdBy = req.user._id;
+        await existingExamSyllabus.save();
+        assignedSyllabusDoc = existingExamSyllabus;
+      } else {
+        assignedSyllabusDoc = await Syllabus.create({
+          examination: exam._id,
+          subject: exam.subject,
+          units: normalizedUnits,
+          createdBy: req.user._id
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select an existing syllabus or define syllabus units.'
+      });
+    }
+
+    exam.assignedSyllabus = assignedSyllabusDoc._id;
+    await exam.save();
+
+    // Link syllabus to the accepted assignment record
+    const assignmentRecord = await ExamSetterAssignment.findOne({
+      examination: exam._id,
+      setter: exam.assignedSetter,
+      status: 'ACCEPTED'
+    }).sort({ createdAt: -1 });
+
+    if (assignmentRecord) {
+      assignmentRecord.syllabus = assignedSyllabusDoc._id;
+      await assignmentRecord.save();
+    }
+
+    // Notify setter with notification
+    await createNotification({
+      recipient: exam.assignedSetter,
+      title: 'Official Syllabus Assigned',
+      message: `Administration has assigned the official syllabus for ${exam.name} (${exam.subject}). You can now review it and construct the question paper.`,
+      type: 'INFO',
+      link: `/setter/syllabus/${exam._id}`
+    });
+
+    await logAudit({
+      req,
+      action: 'SYLLABUS_ASSIGNED',
+      entity: 'Examination',
+      entityId: exam._id,
+      details: {
+        syllabusId: assignedSyllabusDoc._id,
+        unitCount: assignedSyllabusDoc.units ? assignedSyllabusDoc.units.length : 0,
+        assignedToSetter: exam.assignedSetter
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Syllabus assigned successfully to accepted paper setter.',
+      examination: exam,
+      syllabus: assignedSyllabusDoc
     });
   } catch (error) {
     next(error);
@@ -311,12 +440,13 @@ exports.setterResponse = async (req, res, next) => {
       await createNotification({
         targetRole: 'ADMIN',
         title: 'Setter Accepted Assignment',
-        message: `${req.user.name} accepted the setter assignment for ${exam.name}.`,
+        message: `${req.user.name} accepted the setter assignment for ${exam.name}. You can now assign the official syllabus.`,
         type: 'SUCCESS',
-        link: `/admin/examinations/${exam._id}`
+        link: `/admin/examinations`
       });
     } else {
       exam.status = 'SETTER_REJECTED';
+      exam.assignedSyllabus = null; // Rejected setter assignment cannot have syllabus assigned
       exam.setterResponseDate = new Date();
       exam.setterRejectionReason = reason;
       if (assignmentRecord) {
@@ -331,7 +461,7 @@ exports.setterResponse = async (req, res, next) => {
         title: 'Setter Rejected Assignment',
         message: `${req.user.name} rejected assignment for ${exam.name}. Reason: ${reason}`,
         type: 'WARNING',
-        link: `/admin/examinations/${exam._id}`
+        link: `/admin/examinations`
       });
     }
 

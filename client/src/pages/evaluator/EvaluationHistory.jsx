@@ -48,10 +48,10 @@ const EvaluationHistory = () => {
           message="Once you start scoring assigned answer copies, historical audit snapshots will appear here."
         />
       ) : (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Answer Copy ID</th>
                   <th className="py-3.5 px-4">Examination</th>
@@ -62,22 +62,22 @@ const EvaluationHistory = () => {
                   <th className="py-3.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {evaluations.map((ev) => (
-                  <tr key={ev._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-4 font-mono font-bold text-white">
+                  <tr key={ev._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-4 font-mono font-bold text-slate-900">
                       {ev.answerCopy?.copyId || 'COPY'}
                     </td>
                     <td className="py-4 px-4">
-                      <p className="font-semibold text-white">{ev.examination?.name}</p>
-                      <p className="text-[11px] text-indigo-400">{ev.examination?.subject}</p>
+                      <p className="font-semibold text-slate-900">{ev.examination?.name}</p>
+                      <p className="text-[11px] text-indigo-600 font-medium">{ev.examination?.subject}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 border border-slate-800 text-slate-300">
+                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-700">
                         {ev.evaluationMode}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-mono font-bold text-emerald-400">
+                    <td className="py-4 px-4 font-mono font-bold text-emerald-600">
                       {ev.totalMarks} / {ev.maxPossibleMarks} ({ev.percentage}%)
                     </td>
                     <td className="py-4 px-4">
@@ -87,7 +87,7 @@ const EvaluationHistory = () => {
                         <Badge status="COMPLETED">Submitted Final</Badge>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-slate-400 font-mono text-[11px]">
+                    <td className="py-4 px-4 text-slate-500 font-mono text-[11px]">
                       {new Date(ev.submittedAt || ev.updatedAt).toLocaleString()}
                     </td>
                     <td className="py-4 px-4 text-right">

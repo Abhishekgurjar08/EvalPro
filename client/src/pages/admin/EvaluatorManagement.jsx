@@ -80,42 +80,42 @@ const EvaluatorManagement = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {evaluators.map((ev) => (
-            <div key={ev._id} className="surface-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div key={ev._id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-xs">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shadow-xs">
                       {ev.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-base font-bold text-white tracking-tight">{ev.name}</h4>
-                      <p className="text-xs text-slate-400">{ev.email}</p>
+                      <h4 className="text-base font-bold text-slate-900 tracking-tight">{ev.name}</h4>
+                      <p className="text-xs text-slate-500">{ev.email}</p>
                     </div>
                   </div>
                   <Badge status={ev.status}>{ev.status}</Badge>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-800 space-y-2 text-xs">
+                <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Faculty ID:</span>
-                    <span className="font-mono text-slate-200">{ev.employeeId}</span>
+                    <span className="text-slate-500">Faculty ID:</span>
+                    <span className="font-mono text-slate-800 font-semibold">{ev.employeeId}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Department:</span>
-                    <span className="text-slate-200">{ev.department}</span>
+                    <span className="text-slate-500">Department:</span>
+                    <span className="text-slate-700 font-medium">{ev.department}</span>
                   </div>
                 </div>
 
                 {/* Assigned Subjects */}
                 <div className="mt-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
                     Authorized Subject Specializations
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {ev.subjects?.map((sub, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-lg text-[11px] bg-slate-900 border border-slate-800 text-indigo-300 font-medium"
+                        className="px-2.5 py-0.5 rounded-lg text-[11px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-medium"
                       >
                         {sub}
                       </span>
@@ -125,22 +125,22 @@ const EvaluatorManagement = () => {
               </div>
 
               {/* Workload Progress Bar */}
-              <div className="mt-6 pt-4 border-t border-slate-800">
+              <div className="mt-6 pt-4 border-t border-slate-100">
                 <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-slate-400">Assigned Workload:</span>
-                  <span className="font-semibold text-white">
+                  <span className="text-slate-500">Assigned Workload:</span>
+                  <span className="font-semibold text-slate-900">
                     {ev.workload?.activeAssigned || 0} / {ev.workload?.maxWorkload || 50} copies
                   </span>
                 </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                   <div
-                    className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                    className="bg-indigo-600 h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${Math.min(100, ev.workload?.utilizationPercentage || 0)}%`
                     }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-500 mt-1.5">
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-medium">
                   <span>{ev.workload?.completed || 0} completed</span>
                   <span>{ev.workload?.utilizationPercentage || 0}% allocated</span>
                 </div>
@@ -158,55 +158,55 @@ const EvaluatorManagement = () => {
       >
         <form onSubmit={handleCreateEvaluator} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g. Dr. Rahul Sharma"
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
               <input
                 type="email"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="evaluator@university.edu"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Faculty / Employee ID</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Faculty / Employee ID</label>
               <input
                 type="text"
                 required
                 value={formData.employeeId}
                 onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
                 placeholder="FAC-EVAL-205"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Department</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Department</label>
             <input
               type="text"
               required
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Authorized Subjects (Comma-separated)
             </label>
             <input
@@ -215,23 +215,23 @@ const EvaluatorManagement = () => {
               value={formData.subjects}
               onChange={(e) => setFormData({ ...formData, subjects: e.target.value })}
               placeholder="Computer Networks, Operating Systems"
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Max Workload Capacity</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Max Workload Capacity</label>
             <input
               type="number"
               min="10"
               max="200"
               value={formData.maxWorkload}
               onChange={(e) => setFormData({ ...formData, maxWorkload: Number(e.target.value) })}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
             <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>

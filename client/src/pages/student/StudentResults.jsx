@@ -71,51 +71,51 @@ const StudentResults = () => {
           {results.map((res) => (
             <div
               key={res._id}
-              className="surface-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all duration-200"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-indigo-300 hover:shadow-md transition-all duration-200"
             >
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="font-mono text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                    <span className="font-mono text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
                       {res.examination?.code}
                     </span>
-                    <h3 className="text-lg font-bold text-white tracking-tight mt-1.5 leading-snug">
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-1.5 leading-snug">
                       {res.examination?.name}
                     </h3>
-                    <p className="text-xs text-slate-400">{res.examination?.subject}</p>
+                    <p className="text-xs text-slate-500">{res.examination?.subject}</p>
                   </div>
                   <div className="text-right">
-                    <span className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 font-bold font-mono text-lg text-emerald-400 flex items-center justify-center shadow-inner">
+                    <span className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 font-bold font-mono text-lg text-emerald-600 flex items-center justify-center shadow-2xs">
                       {res.grade}
                     </span>
                   </div>
                 </div>
 
                 {/* Score Summary Banner */}
-                <div className="mt-5 p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Awarded Score</span>
-                    <span className="font-mono font-bold text-xl text-white">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">Awarded Score</span>
+                    <span className="font-mono font-bold text-xl text-slate-900">
                       {res.totalMarks} / {res.maxMarks}
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Percentage</span>
-                    <span className="font-mono font-bold text-xl text-indigo-400">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">Percentage</span>
+                    <span className="font-mono font-bold text-xl text-indigo-600">
                       {res.percentage}%
                     </span>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
                   <span>Outcome:</span>
                   {res.passed ? (
-                    <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                    <span className="text-emerald-600 font-bold flex items-center space-x-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Passed with Distinction</span>
                     </span>
                   ) : (
-                    <span className="text-rose-400 font-bold flex items-center space-x-1">
+                    <span className="text-rose-600 font-bold flex items-center space-x-1">
                       <AlertCircle className="w-3.5 h-3.5" />
                       <span>Re-evaluation Required</span>
                     </span>
@@ -123,8 +123,8 @@ const StudentResults = () => {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
-                <span className="text-[11px] text-slate-500 font-mono">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-mono">
                   Released: {new Date(res.publishedAt || res.createdAt).toLocaleDateString()}
                 </span>
                 <Button
@@ -156,15 +156,15 @@ const StudentResults = () => {
         ) : detailedData ? (
           <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 text-xs">
             {/* Top Transcript Card */}
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <p className="text-white font-bold text-sm">{detailedData.result?.student?.name}</p>
-                <p className="text-slate-400 font-mono text-[11px]">
+                <p className="text-slate-900 font-bold text-sm">{detailedData.result?.student?.name}</p>
+                <p className="text-slate-500 font-mono text-[11px]">
                   Roll No: {detailedData.result?.student?.studentRollNo} • {detailedData.result?.examination?.subject}
                 </p>
               </div>
               <div className="text-right">
-                <span className="font-mono font-bold text-xl text-emerald-400">
+                <span className="font-mono font-bold text-xl text-emerald-600">
                   {detailedData.result?.totalMarks} / {detailedData.result?.maxMarks} ({detailedData.result?.percentage}%)
                 </span>
                 <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">
@@ -175,41 +175,41 @@ const StudentResults = () => {
 
             {/* Overall Examiner Feedback */}
             {detailedData.evaluation?.overallComments && (
-              <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-xs text-slate-200">
-                <strong className="text-indigo-400 block mb-1">Faculty Examiner General Assessment:</strong>
+              <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-xs text-slate-800">
+                <strong className="text-indigo-700 block mb-1">Faculty Examiner General Assessment:</strong>
                 <p className="leading-relaxed">{detailedData.evaluation.overallComments}</p>
               </div>
             )}
 
             {/* Question-Wise Scores */}
             <div className="space-y-3">
-              <h5 className="font-bold text-slate-200 uppercase tracking-wider">
+              <h5 className="font-bold text-slate-800 uppercase tracking-wider">
                 Question-Wise Performance Breakdown
               </h5>
               {detailedData.evaluation?.questionEvaluations?.map((qe, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+                <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5">
                   <div className="flex justify-between items-start">
-                    <span className="font-bold text-white">
+                    <span className="font-bold text-slate-900">
                       Q{qe.questionNumber || idx + 1}. {qe.question?.questionText || 'Question'}
                     </span>
-                    <span className="font-mono font-bold text-emerald-400 text-sm shrink-0 ml-3">
+                    <span className="font-mono font-bold text-emerald-600 text-sm shrink-0 ml-3">
                       {qe.marksAwarded} / {qe.maxMarks}
                     </span>
                   </div>
 
                   {qe.comments && (
-                    <div className="text-[11px] text-slate-400 bg-slate-900/60 p-2 rounded-lg border border-slate-800 mt-1">
-                      <strong className="text-slate-300">Examiner Feedback:</strong> {qe.comments}
+                    <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200 mt-1">
+                      <strong className="text-slate-800">Examiner Feedback:</strong> {qe.comments}
                     </div>
                   )}
 
                   {/* Rubric Criteria if evaluated */}
                   {qe.criteriaBreakdown?.length > 0 && (
-                    <div className="pt-2 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       {qe.criteriaBreakdown.map((crit, cIdx) => (
-                        <div key={cIdx} className="text-[10px] flex justify-between text-slate-400 p-1.5 rounded bg-slate-900/40">
+                        <div key={cIdx} className="text-[10px] flex justify-between text-slate-600 p-1.5 rounded bg-slate-50 border border-slate-100">
                           <span>{crit.criterion}</span>
-                          <span className="font-mono text-indigo-400 font-semibold">
+                          <span className="font-mono text-indigo-600 font-semibold">
                             {crit.marksAwarded} / {crit.maxMarks}
                           </span>
                         </div>

@@ -51,7 +51,7 @@ const AnswerCopiesList = () => {
       />
 
       {/* Filter and Search */}
-      <div className="surface-card p-4 rounded-xl border border-slate-800 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
           <input
@@ -60,7 +60,7 @@ const AnswerCopiesList = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchCopies()}
-            className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
+            className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           />
         </div>
 
@@ -68,7 +68,7 @@ const AnswerCopiesList = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           >
             <option value="">All Evaluation Statuses</option>
             <option value="PENDING">Pending Assignment</option>
@@ -90,10 +90,10 @@ const AnswerCopiesList = () => {
           message="Submitted examination copies will appear here for audit, assignment and tracking."
         />
       ) : (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Copy ID</th>
                   <th className="py-3.5 px-4">Candidate</th>
@@ -104,22 +104,22 @@ const AnswerCopiesList = () => {
                   <th className="py-3.5 px-4 text-right">Awarded Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {copies.map((copy) => (
-                  <tr key={copy._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-4 font-mono font-bold text-white">
+                  <tr key={copy._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-4 font-mono font-bold text-slate-900">
                       {copy.copyId}
                     </td>
                     <td className="py-4 px-4">
-                      <p className="font-semibold text-slate-200">{copy.student?.name}</p>
+                      <p className="font-semibold text-slate-900">{copy.student?.name}</p>
                       <p className="text-[10px] text-slate-500 font-mono">{copy.student?.studentRollNo}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <p className="text-white font-medium">{copy.examination?.name}</p>
-                      <p className="text-[11px] text-indigo-400">{copy.subject}</p>
+                      <p className="text-slate-900 font-medium">{copy.examination?.name}</p>
+                      <p className="text-[11px] text-indigo-600 font-semibold">{copy.subject}</p>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 border border-slate-800 text-slate-300">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-700">
                         {copy.evaluationMode}
                       </span>
                     </td>
@@ -129,23 +129,23 @@ const AnswerCopiesList = () => {
                     <td className="py-4 px-4">
                       {copy.assignedEvaluator ? (
                         <div>
-                          <p className="font-medium text-slate-200">{copy.assignedEvaluator.name}</p>
+                          <p className="font-medium text-slate-800">{copy.assignedEvaluator.name}</p>
                           <p className="text-[10px] text-slate-500">{copy.assignedEvaluator.email}</p>
                         </div>
                       ) : (
-                        <span className="text-amber-400/80 italic font-medium">Unassigned</span>
+                        <span className="text-amber-700 italic font-medium">Unassigned</span>
                       )}
                     </td>
                     <td className="py-4 px-4 text-right">
                       {copy.totalAwardedMarks !== null && copy.totalAwardedMarks !== undefined ? (
-                        <div className="font-mono font-bold text-emerald-400 text-sm">
+                        <div className="font-mono font-bold text-emerald-600 text-sm">
                           {copy.totalAwardedMarks} / {copy.totalMaxMarks}
-                          <span className="text-[10px] text-slate-400 font-normal ml-1">
+                          <span className="text-[10px] text-slate-500 font-normal ml-1">
                             ({copy.percentage}%)
                           </span>
                         </div>
                       ) : (
-                        <span className="text-slate-500 italic">Not evaluated</span>
+                        <span className="text-slate-400 italic">Not evaluated</span>
                       )}
                     </td>
                   </tr>

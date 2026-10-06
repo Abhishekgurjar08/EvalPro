@@ -526,7 +526,7 @@ const ScanAnswerCopies = () => {
       <div>
         <Link
           to="/admin/examinations"
-          className="inline-flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-3"
+          className="inline-flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors mb-3"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Examinations</span>
@@ -551,55 +551,55 @@ const ScanAnswerCopies = () => {
       </div>
 
       {/* Examination Metadata Card */}
-      <div className="surface-card p-5 rounded-xl border border-slate-800 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-xs">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-xs">
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Exam Code</span>
-          <span className="font-mono font-bold text-slate-100 text-sm">{exam?.code}</span>
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Exam Code</span>
+          <span className="font-mono font-bold text-slate-900 text-sm">{exam?.code}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Subject</span>
-          <span className="font-semibold text-indigo-400 text-sm">{exam?.subject}</span>
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Subject</span>
+          <span className="font-semibold text-indigo-600 text-sm">{exam?.subject}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Max Marks</span>
-          <span className="font-mono font-bold text-slate-100 text-sm">{exam?.maxMarks} marks</span>
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Max Marks</span>
+          <span className="font-mono font-bold text-slate-900 text-sm">{exam?.maxMarks} marks</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Examination Status</span>
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Examination Status</span>
           <div className="mt-0.5">
             <Badge status={exam?.status}>{exam?.status}</Badge>
           </div>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Total Scanned</span>
-          <span className="font-mono font-bold text-emerald-400 text-base">{totalCopies}</span>
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Total Scanned</span>
+          <span className="font-mono font-bold text-emerald-600 text-base">{totalCopies}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase tracking-wider">Evaluation Mode</span>
-          <span className="font-semibold text-slate-200 block mt-0.5">
+          <span className="text-slate-500 block text-[10px] uppercase font-semibold tracking-wider">Evaluation Mode</span>
+          <span className="font-semibold text-slate-800 block mt-0.5">
             {exam?.evaluationMode === 'AI_ASSISTED' ? 'AI-Assisted' : (exam?.evaluationMode === 'MANUAL' ? 'Manual' : 'Not Configured')}
-            {exam?.evaluationModeLocked && <span className="ml-1 text-emerald-400">🔒</span>}
+            {exam?.evaluationModeLocked && <span className="ml-1 text-emerald-600">🔒</span>}
           </span>
         </div>
       </div>
 
       {/* SECTION 1: SCANNER INTEGRATION STATION */}
-      <div className="surface-card rounded-xl border border-indigo-500/20 overflow-hidden shadow-lg">
-        <div className="p-4 bg-slate-900 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+        <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Scan className="w-5 h-5 text-indigo-400" />
+            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+              <Scan className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
                   Physical Scanner Integration Station
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   ● Bridge Active
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">
+              <p className="text-xs text-slate-500 mt-0.5 font-mono">
                 Driver Protocol: {scannerStatus?.hardwareProtocol || 'TWAIN-Direct / WIA Network Driver'} • 300 DPI Duplex
               </p>
             </div>
@@ -627,75 +627,75 @@ const ScanAnswerCopies = () => {
         </div>
 
         {/* Real-world flow indicator */}
-        <div className="p-4 bg-slate-950/70 border-b border-slate-800/80 text-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-400">
+        <div className="p-4 bg-slate-50/40 border-b border-slate-200 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-600">
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-medium">Physical Answer Copies</span>
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium shadow-xs">Physical Answer Copies</span>
               <span>→</span>
-              <span className="px-2 py-1 rounded bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 font-medium">High-Speed Scanner</span>
+              <span className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-medium shadow-xs">High-Speed Scanner</span>
               <span>→</span>
-              <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-medium">Scanner Integration Service</span>
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium shadow-xs">Scanner Integration Service</span>
               <span>→</span>
-              <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-medium">Digital Copies</span>
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium shadow-xs">Digital Copies</span>
               <span>→</span>
-              <span className="px-2 py-1 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 font-medium">Admin Scanned Copies</span>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium shadow-xs">Admin Scanned Copies</span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
+          <p className="text-[11px] text-slate-500 mt-2">
             ℹ️ Physical answer sheets are ingested directly through the high-speed scanner integration layer (`/api/scanner/ingest`). Barcode identification and optical scans automatically map to this examination.
           </p>
         </div>
 
         {/* Manual File Import Fallback Form */}
         {showUploadFallback && (
-          <form onSubmit={handleManualUpload} className="p-5 bg-slate-900/90 border-t border-slate-800 space-y-4">
+          <form onSubmit={handleManualUpload} className="p-5 bg-slate-50/70 border-t border-slate-200 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
-                <UploadCloud className="w-4 h-4 text-indigo-400" />
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-1.5">
+                <UploadCloud className="w-4 h-4 text-indigo-600" />
                 <span>Operator Manual File Import (PDF, JPG, JPEG, PNG)</span>
               </h4>
-              <span className="text-[10px] text-slate-400">Used if scanner drops files into local directory</span>
+              <span className="text-[10px] text-slate-500">Used if scanner drops files into local directory</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Candidate Roll No</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Candidate Roll No</label>
                 <input
                   type="text"
                   placeholder="e.g. CS-2024-001"
                   value={candidateRollNo}
                   onChange={(e) => setCandidateRollNo(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Candidate Name</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Candidate Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Aarav Sharma"
                   value={candidateName}
                   onChange={(e) => setCandidateName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Answer Booklet ID</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Answer Booklet ID</label>
                 <input
                   type="text"
                   placeholder="e.g. BK-OS-8801"
                   value={bookletNumber}
                   onChange={(e) => setBookletNumber(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Custom Copy ID</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Custom Copy ID</label>
                 <input
                   type="text"
                   placeholder="e.g. COPY-001"
                   value={customCopyId}
                   onChange={(e) => setCustomCopyId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                 />
               </div>
             </div>
@@ -706,7 +706,7 @@ const ScanAnswerCopies = () => {
                 multiple
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
-                className="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
               />
             </div>
 
@@ -719,27 +719,27 @@ const ScanAnswerCopies = () => {
         )}
       </div>
 
-      {/* SECTION 2: EVALUATION MODE SELECTION & LOCKING (Sections 3 & 4) */}
-      <div className="surface-card p-5 rounded-xl border border-slate-800 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+      {/* SECTION 2: EVALUATION MODE SELECTION & LOCKING */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
                 <span>Evaluation Mode Configuration</span>
               </h3>
               {exam?.evaluationModeLocked ? (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
                   <Lock className="w-3 h-3" />
                   <span>LOCKED</span>
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center space-x-1">
                   <Unlock className="w-3 h-3" />
                   <span>SELECT & LOCK</span>
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Select exactly one evaluation mode for this examination. Once locked, the mode cannot be modified and evaluators cannot override it.
             </p>
           </div>
@@ -762,10 +762,10 @@ const ScanAnswerCopies = () => {
           {/* Option 1: MANUAL EVALUATION */}
           <div
             onClick={() => handleSelectMode('MANUAL')}
-            className={`p-4 rounded-xl border transition-all cursor-pointer ${
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
               selectedMode === 'MANUAL'
-                ? 'bg-indigo-950/30 border-indigo-500 ring-1 ring-indigo-500'
-                : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                ? 'bg-indigo-50/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
             } ${exam?.evaluationModeLocked ? 'cursor-default' : ''}`}
           >
             <div className="flex items-start justify-between">
@@ -777,16 +777,16 @@ const ScanAnswerCopies = () => {
                   checked={selectedMode === 'MANUAL'}
                   disabled={exam?.evaluationModeLocked}
                   onChange={() => handleSelectMode('MANUAL')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-700 bg-slate-950"
+                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 bg-white"
                 />
                 <div>
-                  <h4 className="text-sm font-bold text-white">Manual Evaluation</h4>
-                  <span className="text-[11px] text-indigo-400 font-medium">Examiner Assignment & Question-Wise Grading</span>
+                  <h4 className="text-sm font-bold text-slate-900">Manual Evaluation</h4>
+                  <span className="text-[11px] text-indigo-600 font-medium">Examiner Assignment & Question-Wise Grading</span>
                 </div>
               </div>
               <FileCheck className="w-5 h-5 text-slate-400" />
             </div>
-            <p className="text-xs text-slate-300 mt-3 leading-relaxed">
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">
               Scanned copies remain available. Admin assigns copies to evaluators who review scanned booklets and enter question-wise marks manually.
             </p>
           </div>
@@ -794,10 +794,10 @@ const ScanAnswerCopies = () => {
           {/* Option 2: AI EVALUATION */}
           <div
             onClick={() => handleSelectMode('AI_EVALUATION')}
-            className={`p-4 rounded-xl border transition-all cursor-pointer ${
+            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
               isAiMode
-                ? 'bg-indigo-950/30 border-indigo-500 ring-1 ring-indigo-500'
-                : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                ? 'bg-indigo-50/60 border-indigo-500 ring-2 ring-indigo-500/20'
+                : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
             } ${exam?.evaluationModeLocked ? 'cursor-default' : ''}`}
           >
             <div className="flex items-start justify-between">
@@ -809,27 +809,27 @@ const ScanAnswerCopies = () => {
                   checked={isAiMode}
                   disabled={exam?.evaluationModeLocked}
                   onChange={() => handleSelectMode('AI_EVALUATION')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-700 bg-slate-950"
+                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 bg-white"
                 />
                 <div>
-                  <h4 className="text-sm font-bold text-white flex items-center space-x-1.5">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center space-x-1.5">
                     <span>AI Evaluation</span>
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   </h4>
-                  <span className="text-[11px] text-amber-400 font-medium">Google Gemini Multimodal Evaluation + Admin Review</span>
+                  <span className="text-[11px] text-indigo-600 font-medium">Google Gemini Multimodal Evaluation + Admin Review</span>
                 </div>
               </div>
-              <Sparkles className="w-5 h-5 text-amber-400" />
+              <Sparkles className="w-5 h-5 text-indigo-500" />
             </div>
-            <p className="text-xs text-slate-300 mt-3 leading-relaxed">
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">
               Scanned copies are evaluated directly using Google Gemini AI. No evaluator assignment. Admin reviews and finalizes question-wise marks.
             </p>
           </div>
         </div>
 
         {exam?.evaluationModeLocked && (
-          <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 flex items-center space-x-2 text-xs text-emerald-300">
-            <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center space-x-2 text-xs text-emerald-800">
+            <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               Evaluation Mode is permanently <strong>LOCKED</strong> to{' '}
               <strong>{isAiMode ? 'AI Evaluation' : 'Manual Evaluation'}</strong>.
@@ -840,20 +840,20 @@ const ScanAnswerCopies = () => {
       </div>
 
       {/* SECTION 3: SCANNED COPIES TABLE & ASSIGNMENTS */}
-      <div className="surface-card rounded-xl border border-slate-800 overflow-hidden shadow-lg space-y-0">
-        <div className="p-4 bg-slate-900 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm space-y-0">
+        <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Scanned Copies ({totalCopies})
             </h3>
             <div className="flex items-center space-x-2 text-xs">
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[11px]">
                 Assigned: {assignedCopies}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-amber-400 font-mono">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-mono text-[11px]">
                 Unassigned: {unassignedCopies}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px]">
                 Evaluated: {evaluatedCopies}
               </span>
             </div>
@@ -863,7 +863,7 @@ const ScanAnswerCopies = () => {
             {isAiMode ? (
               <div className="flex items-center space-x-2">
                 <Button
-                  variant="primary"
+                  variant="ai"
                   size="sm"
                   icon={Sparkles}
                   loading={runningAiBatch}
@@ -873,7 +873,6 @@ const ScanAnswerCopies = () => {
                     }
                     setConfirmAiModalCopy('BATCH');
                   }}
-                  className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium shadow-md shadow-indigo-950/50"
                 >
                   {selectedCopyIds.length > 0
                     ? `🤖 Evaluate Selected (${selectedCopyIds.length}) with AI`
@@ -906,36 +905,36 @@ const ScanAnswerCopies = () => {
           </div>
         </div>
 
-        {/* AI BATCH SELECTION TOOLBAR (Min 50 to Max 100 copies supported) */}
+        {/* AI BATCH SELECTION TOOLBAR */}
         {isAiMode && totalCopies > 0 && (
-          <div className="p-3 bg-slate-950/80 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="p-3 bg-slate-50/60 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
-              <span className="text-slate-400">
+              <span className="text-slate-600 font-medium">
                 Eligible Copies:{' '}
-                <strong className="text-white font-mono font-bold">
+                <strong className="text-slate-900 font-mono font-bold">
                   {getEligibleAiCopies().length}
                 </strong>
               </span>
               {selectedCopyIds.length > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono text-[11px]">
+                <span className="px-2.5 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[11px]">
                   {selectedCopyIds.length} Selected for AI Check
                 </span>
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-slate-400 text-[11px] font-medium">Quick Batch Select:</span>
+              <span className="text-slate-500 text-[11px] font-medium">Quick Batch Select:</span>
               <button
                 type="button"
                 onClick={() => handleSelectRandomAiCopies(50)}
-                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs transition-colors shadow-sm"
+                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-mono font-bold text-xs transition-colors shadow-xs"
               >
                 ⚡ 50 Copies
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectRandomAiCopies(100)}
-                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs transition-colors shadow-sm"
+                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-mono font-bold text-xs transition-colors shadow-xs"
               >
                 ⚡ 100 Copies
               </button>
@@ -952,7 +951,7 @@ const ScanAnswerCopies = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedCopyIds([])}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-slate-500 hover:text-slate-800"
                 >
                   Clear Selection
                 </Button>
@@ -979,7 +978,7 @@ const ScanAnswerCopies = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4 w-10">
                     <input
@@ -996,7 +995,7 @@ const ScanAnswerCopies = () => {
                           setSelectedCopyIds([]);
                         }
                       }}
-                      className="rounded border-slate-700 bg-slate-900 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-slate-300 bg-white cursor-pointer text-indigo-600 focus:ring-indigo-500"
                     />
                   </th>
                   <th className="py-3 px-4">Copy ID</th>
@@ -1008,36 +1007,36 @@ const ScanAnswerCopies = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {copies.map((copy, idx) => {
                   const isAssigned = !!copy.assignedEvaluator;
                   const isCompleted = ['AI_EVALUATED', 'AI_REVIEWED', 'EVALUATED', 'REVIEWED', 'COMPLETED', 'AI_APPROVED', 'ADMIN_REVIEWED', 'FINALIZED'].includes(copy.evaluationStatus);
 
                   return (
-                    <tr key={copy._id} className="hover:bg-slate-800/30 transition-colors">
+                    <tr key={copy._id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4">
                         <input
                           type="checkbox"
                           checked={selectedCopyIds.includes(copy._id)}
                           onChange={() => toggleSelectCopy(copy._id)}
-                          className="rounded border-slate-700 bg-slate-900 cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                          className="rounded border-slate-300 bg-white cursor-pointer text-indigo-600 focus:ring-indigo-500"
                         />
                       </td>
 
                       {/* Copy ID */}
-                      <td className="py-3 px-4 font-mono font-bold text-white">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
                         <div className="flex items-center space-x-1.5">
                           <span>{copy.copyId}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-sans block">
+                        <span className="text-[10px] text-slate-500 font-sans block">
                           Booklet: {copy.bookletNumber || 'N/A'}
                         </span>
                       </td>
 
                       {/* Candidate */}
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-100">{copy.candidateName || 'Candidate'}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">
+                        <div className="font-semibold text-slate-900">{copy.candidateName || 'Candidate'}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
                           Roll: {copy.candidateRollNo || 'N/A'}
                         </div>
                       </td>
@@ -1045,31 +1044,31 @@ const ScanAnswerCopies = () => {
                       {/* Status */}
                       <td className="py-3 px-4">
                         {['AI_REVIEWED', 'REVIEWED', 'ADMIN_REVIEWED'].includes(copy.evaluationStatus) ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {isAiMode ? 'AI REVIEWED' : 'REVIEWED'}
                           </span>
                         ) : ['AI_EVALUATED', 'EVALUATED'].includes(copy.evaluationStatus) ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                             {isAiMode ? 'AI EVALUATED' : 'EVALUATED'}
                           </span>
                         ) : ['AI_PROCESSING', 'PROCESSING'].includes(copy.evaluationStatus) ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
                             AI PROCESSING...
                           </span>
                         ) : ['AI_FAILED', 'FAILED'].includes(copy.evaluationStatus) ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                             AI FAILED
                           </span>
                         ) : isAiMode ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
                             AI PENDING
                           </span>
                         ) : (
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
                               isAssigned
-                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
-                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
                             }`}
                           >
                             {isAssigned ? 'ASSIGNED' : 'PENDING'}
@@ -1081,12 +1080,12 @@ const ScanAnswerCopies = () => {
                       <td className="py-3 px-4">
                         <span className="font-mono text-xs">
                           {isAiMode ? (
-                            <span className="text-amber-400 flex items-center space-x-1">
-                              <Sparkles className="w-3 h-3" />
+                            <span className="text-indigo-600 font-medium flex items-center space-x-1">
+                              <Sparkles className="w-3 h-3 text-amber-500" />
                               <span>AI Evaluation</span>
                             </span>
                           ) : (
-                            <span className="text-slate-300">Manual Evaluation</span>
+                            <span className="text-slate-600">Manual Evaluation</span>
                           )}
                         </span>
                       </td>
@@ -1094,16 +1093,16 @@ const ScanAnswerCopies = () => {
                       {/* Evaluator */}
                       <td className="py-3 px-4">
                         {isAiMode ? (
-                          <span className="text-emerald-400/90 font-medium text-[11px] flex items-center space-x-1">
-                            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span className="text-emerald-700 font-medium text-[11px] flex items-center space-x-1">
+                            <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
                             <span>AI System (No Evaluator)</span>
                           </span>
                         ) : copy.assignedEvaluator ? (
                           <div>
-                            <span className="font-semibold text-slate-200 block">
+                            <span className="font-semibold text-slate-800 block">
                               {copy.assignedEvaluator.name}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
+                            <span className="text-[10px] text-slate-500 font-mono">
                               {copy.assignedEvaluator.email}
                             </span>
                           </div>
@@ -1116,29 +1115,29 @@ const ScanAnswerCopies = () => {
                       <td className="py-3 px-4">
                         {isCompleted ? (
                           <div>
-                            <div className="flex items-center space-x-1 text-emerald-400 font-mono font-bold">
+                            <div className="flex items-center space-x-1 text-emerald-700 font-mono font-bold">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>
                                 Final: {copy.finalTotal ?? copy.totalAwardedMarks} / {copy.totalMaxMarks} ({copy.percentage}%)
                               </span>
                             </div>
                             {isAiMode && (
-                              <div className="text-[10px] text-amber-400/90 font-mono">
+                              <div className="text-[10px] text-indigo-600 font-mono font-semibold">
                                 AI Score: {copy.aiTotal ?? copy.totalAwardedMarks} / {copy.totalMaxMarks}
                               </div>
                             )}
                           </div>
                         ) : ['AI_PROCESSING', 'PROCESSING'].includes(copy.evaluationStatus) ? (
-                          <span className="text-amber-400 font-mono text-xs flex items-center space-x-1">
+                          <span className="text-amber-700 font-mono text-xs flex items-center space-x-1 font-semibold">
                             <RefreshCw className="w-3 h-3 animate-spin" />
                             <span>AI Processing...</span>
                           </span>
                         ) : ['AI_FAILED', 'FAILED'].includes(copy.evaluationStatus) ? (
-                          <span className="text-rose-400 font-mono text-xs" title={copy.errorMessage}>
+                          <span className="text-rose-600 font-mono text-xs font-semibold" title={copy.errorMessage}>
                             AI Evaluation Failed
                           </span>
                         ) : (
-                          <span className="text-slate-400 font-mono text-xs">
+                          <span className="text-slate-500 font-mono text-xs">
                             {isAiMode ? 'Ready for AI' : 'Pending Evaluation'}
                           </span>
                         )}
@@ -1157,7 +1156,6 @@ const ScanAnswerCopies = () => {
                         </Button>
 
                         {isAiMode ? (
-                          // STRICT REQUIREMENT: In AI Evaluation, NEVER show Assign Evaluator!
                           <>
                             {isCompleted ? (
                               <div className="inline-flex items-center space-x-1.5">
@@ -1166,7 +1164,7 @@ const ScanAnswerCopies = () => {
                                   variant="primary"
                                   icon={CheckCircle2}
                                   onClick={() => openAiReviewModal(copy)}
-                                  className="text-[11px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm"
+                                  className="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                                 >
                                   Review & Modify Marks
                                 </Button>
@@ -1176,7 +1174,7 @@ const ScanAnswerCopies = () => {
                                     variant="outline"
                                     icon={ExternalLink}
                                     title="Open Full Evaluation Workspace"
-                                    className="text-[11px] px-2 text-slate-300 hover:text-white"
+                                    className="text-[11px] px-2 text-slate-600 hover:text-slate-900"
                                   />
                                 </Link>
                               </div>
@@ -1185,7 +1183,7 @@ const ScanAnswerCopies = () => {
                                 size="sm"
                                 variant="outline"
                                 disabled
-                                className="text-[11px] text-amber-300 border-amber-500/40 opacity-80"
+                                className="text-[11px] text-amber-700 border-amber-200 opacity-80"
                               >
                                 <RefreshCw className="w-3 h-3 animate-spin mr-1" />
                                 AI Processing...
@@ -1196,24 +1194,23 @@ const ScanAnswerCopies = () => {
                                 variant="outline"
                                 icon={RefreshCw}
                                 onClick={() => setConfirmAiModalCopy(copy)}
-                                className="text-[11px] text-rose-300 border-rose-500/40 hover:bg-rose-500/10"
+                                className="text-[11px] text-rose-700 border-rose-200 hover:bg-rose-50"
                               >
                                 Retry AI
                               </Button>
                             ) : (
                               <Button
                                 size="sm"
-                                variant="primary"
+                                variant="ai"
                                 icon={Sparkles}
                                 onClick={() => setConfirmAiModalCopy(copy)}
-                                className="text-[11px] bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white shadow-sm"
+                                className="text-[11px]"
                               >
                                 🤖 Evaluate with AI
                               </Button>
                             )}
                           </>
                         ) : (
-                          // MANUAL MODE: Assign Evaluator and Manual Evaluation
                           <>
                             {!isCompleted && (
                               <Button
@@ -1249,7 +1246,7 @@ const ScanAnswerCopies = () => {
                             variant="ghost"
                             icon={Trash2}
                             onClick={() => handleDeleteCopy(copy._id)}
-                            className="text-[11px] text-rose-400 hover:text-rose-300"
+                            className="text-[11px] text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                           />
                         )}
                       </td>
@@ -1274,30 +1271,30 @@ const ScanAnswerCopies = () => {
       >
         <form onSubmit={handleAssignSubmit} className="space-y-4 text-xs">
           <div>
-            <span className="text-slate-400 block mb-1">Examination & Subject</span>
-            <span className="font-semibold text-slate-100">{exam?.name} ({exam?.subject})</span>
+            <span className="text-slate-500 block mb-1">Examination & Subject</span>
+            <span className="font-semibold text-slate-900">{exam?.name} ({exam?.subject})</span>
           </div>
 
           <div>
-            <span className="text-slate-400 block mb-1">Locked Evaluation Mode</span>
-            <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-              <span className="font-bold text-indigo-400 font-mono">
+            <span className="text-slate-500 block mb-1">Locked Evaluation Mode</span>
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <span className="font-bold text-indigo-600 font-mono">
                 {exam?.evaluationMode || 'MANUAL'}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-slate-500">
                 (Copies inherit this mode automatically)
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">
+            <label className="block text-slate-700 font-semibold mb-1.5">
               Select Evaluator *
             </label>
             <select
               value={targetEvaluatorId}
               onChange={(e) => setTargetEvaluatorId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
             >
               <option value="">-- Choose Evaluator --</option>
               {evaluators.map((ev) => (
@@ -1308,7 +1305,7 @@ const ScanAnswerCopies = () => {
             </select>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t border-slate-800">
+          <div className="flex justify-end space-x-2 pt-4 border-t border-slate-200">
             <Button
               type="button"
               variant="outline"
@@ -1330,7 +1327,7 @@ const ScanAnswerCopies = () => {
         </form>
       </Modal>
 
-      {/* AI EVALUATION CONFIRMATION MODAL (Section 6) */}
+      {/* AI EVALUATION CONFIRMATION MODAL */}
       <Modal
         isOpen={!!confirmAiModalCopy}
         onClose={() => setConfirmAiModalCopy(null)}
@@ -1338,30 +1335,30 @@ const ScanAnswerCopies = () => {
         maxWidth="max-w-lg"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 text-slate-200 space-y-3">
-            <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-sm">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+          <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-slate-700 space-y-3">
+            <div className="flex items-center space-x-2 text-indigo-700 font-semibold text-sm">
+              <Sparkles className="w-4 h-4 text-amber-500" />
               <span>AI Evaluation Confirmation</span>
             </div>
-            <p className="leading-relaxed text-slate-300">
+            <p className="leading-relaxed text-slate-700">
               The answer copies will be automatically evaluated using the configured AI evaluation engine.
             </p>
-            <p className="leading-relaxed text-slate-400 text-[11px]">
+            <p className="leading-relaxed text-slate-500 text-[11px]">
               After evaluation completes, Admin can review questions, modify marks, and save final grades.
             </p>
 
             {confirmAiModalCopy === 'BATCH' && (
-              <div className="mt-3 pt-3 border-t border-slate-800 space-y-2.5">
+              <div className="mt-3 pt-3 border-t border-indigo-100 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-medium">Batch Size to Evaluate:</span>
+                  <span className="text-slate-700 font-medium">Batch Size to Evaluate:</span>
                   <div className="flex items-center space-x-1.5 font-mono">
                     <button
                       type="button"
                       onClick={() => handleSelectRandomAiCopies(50)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${
                         selectedCopyIds.length === 50
-                          ? 'bg-indigo-600 text-white border-indigo-500'
-                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       50 Copies
@@ -1371,8 +1368,8 @@ const ScanAnswerCopies = () => {
                       onClick={() => handleSelectRandomAiCopies(100)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${
                         selectedCopyIds.length === 100
-                          ? 'bg-indigo-600 text-white border-indigo-500'
-                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       100 Copies
@@ -1380,7 +1377,7 @@ const ScanAnswerCopies = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] font-mono text-amber-300 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                <div className="flex items-center justify-between text-[11px] font-mono text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
                   <span>Selected for AI Checking:</span>
                   <strong>{selectedCopyIds.length > 0 ? selectedCopyIds.length : Math.min(50, copies.length)} copies</strong>
                 </div>
@@ -1388,12 +1385,12 @@ const ScanAnswerCopies = () => {
             )}
 
             {confirmAiModalCopy && confirmAiModalCopy !== 'BATCH' && (
-              <div className="mt-2 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
-                <span className="text-slate-400">
-                  Target Copy: <strong className="text-white">{confirmAiModalCopy.copyId}</strong>
+              <div className="mt-2 pt-2.5 border-t border-indigo-100 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-500">
+                  Target Copy: <strong className="text-slate-900">{confirmAiModalCopy.copyId}</strong>
                 </span>
-                <span className="text-slate-400">
-                  Candidate: <strong className="text-white">{confirmAiModalCopy.candidateName || 'N/A'}</strong>
+                <span className="text-slate-500">
+                  Candidate: <strong className="text-slate-900">{confirmAiModalCopy.candidateName || 'N/A'}</strong>
                 </span>
               </div>
             )}
@@ -1411,7 +1408,7 @@ const ScanAnswerCopies = () => {
             </Button>
             <Button
               type="button"
-              variant="primary"
+              variant="ai"
               size="sm"
               icon={Sparkles}
               loading={runningAiBatch || !!evaluatingCopyId}
@@ -1425,7 +1422,6 @@ const ScanAnswerCopies = () => {
                   await handleSingleCopyAiEvaluate(target._id);
                 }
               }}
-              className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium"
             >
               Start AI Checking
             </Button>
@@ -1442,29 +1438,29 @@ const ScanAnswerCopies = () => {
       >
         <div className="space-y-4 text-xs max-h-[75vh] overflow-y-auto pr-1">
           {/* Header Summary */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 grid grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-3">
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase">Candidate</span>
-              <span className="font-semibold text-slate-100">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Candidate</span>
+              <span className="font-semibold text-slate-900">
                 {reviewModalCopy?.candidateName || reviewModalCopy?.student?.name || 'Candidate'}
               </span>
-              <span className="text-[10px] text-slate-400 block font-mono">
+              <span className="text-[10px] text-slate-500 block font-mono">
                 Roll: {reviewModalCopy?.candidateRollNo || reviewModalCopy?.student?.studentRollNo || 'N/A'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase">Subject & Booklet</span>
-              <span className="font-semibold text-indigo-400">{exam?.subject || reviewModalCopy?.subject}</span>
-              <span className="text-[10px] text-slate-400 block font-mono">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Subject & Booklet</span>
+              <span className="font-semibold text-indigo-600">{exam?.subject || reviewModalCopy?.subject}</span>
+              <span className="text-[10px] text-slate-500 block font-mono">
                 Booklet: {reviewModalCopy?.bookletNumber || 'N/A'}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-slate-400 block text-[10px] uppercase">Live Calculated Total</span>
-              <span className="text-lg font-bold font-mono text-emerald-400">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Live Calculated Total</span>
+              <span className="text-lg font-bold font-mono text-emerald-600">
                 {calculateModalFinalTotal()} / {reviewModalCopy?.totalMaxMarks || exam?.maxMarks || 50}
               </span>
-              <span className="text-[10px] text-slate-400 block">
+              <span className="text-[10px] text-slate-500 block">
                 Original AI: {reviewModalCopy?.aiTotal ?? 0}m
               </span>
             </div>
@@ -1472,9 +1468,9 @@ const ScanAnswerCopies = () => {
 
           {/* Question by Question Review & Mark Overrides */}
           <div className="space-y-3">
-            <h5 className="font-semibold text-slate-200 text-xs uppercase tracking-wider flex items-center justify-between">
+            <h5 className="font-semibold text-slate-800 text-xs uppercase tracking-wider flex items-center justify-between">
               <span>Question-Wise Marks & Overrides</span>
-              <span className="text-[11px] text-slate-400 font-normal">
+              <span className="text-[11px] text-slate-500 font-normal">
                 Admin can edit marks and comments below
               </span>
             </h5>
@@ -1490,22 +1486,22 @@ const ScanAnswerCopies = () => {
               return (
                 <div
                   key={qId}
-                  className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5 hover:border-slate-700 transition-colors"
+                  className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-2.5 hover:border-slate-300 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-xs">
+                    <span className="font-bold text-slate-900 text-xs">
                       Question {qNum}{' '}
-                      <span className="text-slate-400 font-normal font-mono">
+                      <span className="text-slate-500 font-normal font-mono">
                         (Max: {ans.maxMarks} marks)
                       </span>
                     </span>
 
                     <div className="flex items-center space-x-3">
-                      <span className="text-[11px] text-amber-400 font-mono">
+                      <span className="text-[11px] text-indigo-700 font-mono font-semibold">
                         AI Score: <strong>{aiMarks}</strong>/{ans.maxMarks}
                       </span>
                       {isModified && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
                           Modified by Admin
                         </span>
                       )}
@@ -1514,26 +1510,26 @@ const ScanAnswerCopies = () => {
 
                   {/* Student Answer */}
                   {ans.studentAnswer && (
-                    <div className="p-2.5 bg-slate-950 rounded border border-slate-800 text-slate-300 text-xs">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-slate-800 text-xs">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                         Candidate Answer:
                       </span>
-                      <p className="line-clamp-3 font-mono text-[11px]">{ans.studentAnswer}</p>
+                      <p className="line-clamp-3 font-mono text-[11px] text-slate-700">{ans.studentAnswer}</p>
                     </div>
                   )}
 
                   {/* AI Feedback */}
                   {(ans.aiFeedback || ans.aiAnalysis) && (
-                    <div className="p-2 bg-amber-500/5 rounded border border-amber-500/20 text-amber-200/90 text-[11px]">
-                      <span className="font-semibold text-amber-400">AI Feedback: </span>
+                    <div className="p-2.5 bg-indigo-50/60 rounded-xl border border-indigo-100 text-indigo-900 text-[11px]">
+                      <span className="font-semibold text-indigo-700">AI Feedback: </span>
                       {ans.aiFeedback || ans.aiAnalysis}
                     </div>
                   )}
 
                   {/* Edit Marks & Admin Comments */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-800/80 items-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-200 items-center">
                     <div className="flex items-center space-x-2">
-                      <label className="text-[11px] font-semibold text-slate-300 shrink-0">
+                      <label className="text-[11px] font-semibold text-slate-700 shrink-0">
                         Final Marks:
                       </label>
                       <input
@@ -1543,9 +1539,9 @@ const ScanAnswerCopies = () => {
                         step="0.5"
                         value={currentMarks}
                         onChange={(e) => handleReviewMarkChange(qId, e.target.value, ans.maxMarks)}
-                        className="w-20 bg-slate-950 border border-indigo-500/60 rounded px-2.5 py-1 text-center font-mono font-bold text-sm text-emerald-400 focus:outline-none focus:border-indigo-400"
+                        className="w-20 bg-white border border-indigo-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-sm text-emerald-600 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                       />
-                      <span className="text-slate-400 font-mono text-xs">/ {ans.maxMarks}</span>
+                      <span className="text-slate-500 font-mono text-xs">/ {ans.maxMarks}</span>
                     </div>
 
                     <div className="sm:col-span-2">
@@ -1554,7 +1550,7 @@ const ScanAnswerCopies = () => {
                         placeholder="Admin comment / remark for Question (optional)..."
                         value={formEntry.comments || ''}
                         onChange={(e) => handleReviewCommentChange(qId, e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                       />
                     </div>
                   </div>
@@ -1564,8 +1560,8 @@ const ScanAnswerCopies = () => {
           </div>
 
           {/* Overall Remarks */}
-          <div className="space-y-1 pt-2 border-t border-slate-800">
-            <label className="text-[11px] font-semibold text-slate-300">
+          <div className="space-y-1 pt-2 border-t border-slate-200">
+            <label className="text-[11px] font-semibold text-slate-700">
               Overall Evaluation Remarks (Admin)
             </label>
             <textarea
@@ -1573,18 +1569,18 @@ const ScanAnswerCopies = () => {
               value={reviewOverallComment}
               onChange={(e) => setReviewOverallComment(e.target.value)}
               placeholder="Provide overall review notes, confirmation rationale, or student feedback..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-200">
             <Link
               to={`/admin/evaluate/${reviewModalCopy?._id}`}
-              className="text-xs text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center space-x-1"
+              className="text-xs text-indigo-600 hover:text-indigo-700 underline font-medium flex items-center space-x-1"
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1" />
-              Open Full Evaluation Workspace
+              <span>Open Full Evaluation Workspace</span>
             </Link>
 
             <div className="flex items-center space-x-2">
@@ -1602,7 +1598,7 @@ const ScanAnswerCopies = () => {
                 icon={CheckCircle2}
                 loading={savingFinalMarks}
                 onClick={handleSaveFinalMarks}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-950/40"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
               >
                 Save & Finalize Marks
               </Button>
@@ -1618,43 +1614,43 @@ const ScanAnswerCopies = () => {
         title={`Scanned Physical Answer Booklet: ${viewCopyModal?.copyId}`}
       >
         <div className="space-y-4 text-xs">
-          <div className="grid grid-cols-3 gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
+          <div className="grid grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
             <div>
-              <span className="text-slate-400 block text-[10px]">Candidate Roll No</span>
-              <span className="font-mono font-bold text-slate-100">{viewCopyModal?.candidateRollNo || 'N/A'}</span>
+              <span className="text-slate-500 block text-[10px] font-semibold">Candidate Roll No</span>
+              <span className="font-mono font-bold text-slate-900">{viewCopyModal?.candidateRollNo || 'N/A'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">Booklet ID</span>
-              <span className="font-mono font-bold text-indigo-400">{viewCopyModal?.bookletNumber || 'N/A'}</span>
+              <span className="text-slate-500 block text-[10px] font-semibold">Booklet ID</span>
+              <span className="font-mono font-bold text-indigo-600">{viewCopyModal?.bookletNumber || 'N/A'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">Candidate Name</span>
-              <span className="font-semibold text-slate-200">{viewCopyModal?.candidateName || 'Candidate'}</span>
+              <span className="text-slate-500 block text-[10px] font-semibold">Candidate Name</span>
+              <span className="font-semibold text-slate-800">{viewCopyModal?.candidateName || 'Candidate'}</span>
             </div>
           </div>
 
           {/* Zoom controls */}
-          <div className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800">
+          <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
             <div className="flex items-center space-x-1">
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.2))}
-                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <span className="font-mono text-slate-300 text-xs px-2">{Math.round(zoomLevel * 100)}%</span>
+              <span className="font-mono text-slate-700 text-xs px-2">{Math.round(zoomLevel * 100)}%</span>
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.min(2.0, z + 0.2))}
-                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setZoomLevel(1)}
-                className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 hover:text-white hover:bg-slate-800"
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors"
               >
                 Reset
               </button>
@@ -1665,7 +1661,7 @@ const ScanAnswerCopies = () => {
                 href={viewCopyModal.scannedDocument.fileUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center space-x-1 text-indigo-400 hover:text-indigo-300 text-xs"
+                className="inline-flex items-center space-x-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium"
               >
                 <span>Open in New Tab</span>
                 <ExternalLink className="w-3 h-3" />
@@ -1674,13 +1670,13 @@ const ScanAnswerCopies = () => {
           </div>
 
           {/* Document Display */}
-          <div className="max-h-[500px] overflow-auto bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-center">
+          <div className="max-h-[500px] overflow-auto bg-slate-100 p-4 rounded-xl border border-slate-200 flex justify-center">
             {viewCopyModal?.scannedDocument?.fileUrl ? (
               viewCopyModal.scannedDocument.fileType?.includes('pdf') || viewCopyModal.scannedDocument.fileName?.endsWith('.pdf') ? (
                 <iframe
                   src={viewCopyModal.scannedDocument.fileUrl}
                   title="Answer Booklet Preview"
-                  className="w-full h-[450px] rounded border border-slate-700 bg-white"
+                  className="w-full h-[450px] rounded-xl border border-slate-300 bg-white"
                   style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
                 />
               ) : (
@@ -1688,12 +1684,12 @@ const ScanAnswerCopies = () => {
                   src={viewCopyModal.scannedDocument.fileUrl}
                   alt="Scanned Physical Copy"
                   style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
-                  className="max-w-full rounded shadow-md border border-slate-800"
+                  className="max-w-full rounded-xl shadow-md border border-slate-200"
                 />
               )
             ) : (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <FileText className="w-8 h-8 mx-auto text-slate-600" />
+              <div className="p-8 text-center text-slate-500 space-y-2">
+                <FileText className="w-8 h-8 mx-auto text-slate-400" />
                 <p>Digital copy rendered from scanner station ingestion data.</p>
                 <p className="font-mono text-xs text-slate-500">Booklet: {viewCopyModal?.bookletNumber}</p>
               </div>

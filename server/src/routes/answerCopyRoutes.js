@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const answerCopyController = require('../controllers/answerCopyController');
+const annotationController = require('../controllers/annotationController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.use(protect);
@@ -8,6 +9,12 @@ router.use(protect);
 router.get('/', answerCopyController.getAnswerCopies);
 router.get('/my-assigned', authorize('EVALUATOR'), answerCopyController.getMyAssignedCopies);
 router.get('/:id', answerCopyController.getAnswerCopyById);
+
+// Evaluator Remarks & Annotation Endpoints
+router.get('/:id/annotations', authorize('ADMIN', 'EVALUATOR'), annotationController.getAnnotations);
+router.put('/:id/annotations', authorize('ADMIN', 'EVALUATOR'), annotationController.saveAnnotations);
+router.post('/:id/annotations', authorize('ADMIN', 'EVALUATOR'), annotationController.saveAnnotations);
+router.delete('/:id/annotations/page/:pageNumber', authorize('ADMIN', 'EVALUATOR'), annotationController.clearPageAnnotations);
 
 // Post-Examination Scanning & Mode Locking Endpoints
 router.post('/scan-upload/:examinationId', authorize('ADMIN'), answerCopyController.uploadScannedCopies);

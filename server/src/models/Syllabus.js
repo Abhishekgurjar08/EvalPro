@@ -18,7 +18,7 @@ const syllabusSchema = new mongoose.Schema(
     examination: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Examination',
-      required: true
+      required: false
     },
     subject: {
       type: String,

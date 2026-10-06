@@ -23,7 +23,10 @@ import {
   HelpCircle,
   Info,
   Clock,
-  ExternalLink
+  ExternalLink,
+  X,
+  Trash2,
+  Plus
 } from 'lucide-react';
 
 const CopyAssignment = () => {
@@ -51,6 +54,9 @@ const CopyAssignment = () => {
 
   // Bulk Random Selection State
   const [customRandomCount, setCustomRandomCount] = useState('');
+
+  // Track recently AI-evaluated copy IDs to prioritize at the very top of the list
+  const [recentlyEvaluatedIds, setRecentlyEvaluatedIds] = useState([]);
 
   const { showToast } = useToast();
 
@@ -91,10 +97,17 @@ const CopyAssignment = () => {
 
   const fetchCopiesForExam = async (examId) => {
     try {
-      const res = await api.get(`/answer-copies?examinationId=${examId}&limit=200`);
+      const res = await api.get(`/answer-copies?examinationId=${examId}&limit=200&excludeFinalized=true`);
       if (res.data.success) {
-        setCopies(res.data.answerCopies || []);
-        setSelectedCopyIds([]);
+        // Automatically exclude finalized/completed copies from the copy assignment list
+        const unfinalizedCopies = (res.data.answerCopies || []).filter((copy) => {
+          const isFinalized =
+            ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED', 'REVIEWED'].includes(copy.evaluationStatus) ||
+            ['FINALIZED', 'COMPLETED', 'REVIEWED'].includes(copy.status);
+          return !isFinalized;
+        });
+        setCopies(unfinalizedCopies);
+        setSelectedCopyIds((prev) => prev.filter((id) => unfinalizedCopies.some((c) => c._id === id)));
       }
     } catch (err) {
       showToast('Error loading answer copies for selected exam', 'error');
@@ -125,8 +138,8 @@ const CopyAssignment = () => {
     return copies.filter((copy) => {
       // Never select already completed or finalized copies
       const isAlreadyCompleted =
-        ['COMPLETED', 'FINALIZED', 'ADMIN_REVIEWED', 'EVALUATED'].includes(copy.evaluationStatus) ||
-        ['COMPLETED', 'FINALIZED', 'EVALUATED'].includes(copy.status);
+        ['COMPLETED', 'FINALIZED', 'ADMIN_REVIEWED', 'REVIEWED', 'EVALUATED'].includes(copy.evaluationStatus) ||
+        ['COMPLETED', 'FINALIZED', 'REVIEWED', 'EVALUATED'].includes(copy.status);
       if (isAlreadyCompleted) return false;
 
       if (evaluationMode === 'MANUAL') {
@@ -140,17 +153,70 @@ const CopyAssignment = () => {
   };
 
   const eligibleCopies = getEligibleCopies();
+  const selectedCopies = copies.filter((c) => selectedCopyIds.includes(c._id));
+  const availableCopiesList = copies.filter((c) => {
+    const isFinalized =
+      ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED', 'REVIEWED'].includes(c.evaluationStatus) ||
+      ['FINALIZED', 'COMPLETED', 'REVIEWED'].includes(c.status);
+    return !selectedCopyIds.includes(c._id) && !isFinalized;
+  });
+  const eligibleUnselectedCopies = eligibleCopies.filter((c) => !selectedCopyIds.includes(c._id));
+
+  // Sort copies so that recently AI-evaluated copies and AI-evaluated copies requiring review are right at the very top!
+  const sortedAvailableCopies = [...availableCopiesList].sort((a, b) => {
+    // Priority 1: Copies evaluated in the current batch/session
+    const aRecentIdx = recentlyEvaluatedIds.indexOf(a._id);
+    const bRecentIdx = recentlyEvaluatedIds.indexOf(b._id);
+    if (aRecentIdx !== -1 && bRecentIdx !== -1) {
+      return aRecentIdx - bRecentIdx;
+    }
+    if (aRecentIdx !== -1) return -1;
+    if (bRecentIdx !== -1) return 1;
+
+    // Priority 2: Copies checked by AI needing Admin Review
+    const aIsAiEvaluated = ['AI_EVALUATED', 'AI_REVIEW_PENDING', 'ADMIN_REVIEW'].includes(a.evaluationStatus);
+    const bIsAiEvaluated = ['AI_EVALUATED', 'AI_REVIEW_PENDING', 'ADMIN_REVIEW'].includes(b.evaluationStatus);
+    if (aIsAiEvaluated && !bIsAiEvaluated) return -1;
+    if (!aIsAiEvaluated && bIsAiEvaluated) return 1;
+
+    // Priority 3: Copies currently processing AI
+    const aIsProcessing = ['AI_PROCESSING', 'PROCESSING'].includes(a.evaluationStatus);
+    const bIsProcessing = ['AI_PROCESSING', 'PROCESSING'].includes(b.evaluationStatus);
+    if (aIsProcessing && !bIsProcessing) return -1;
+    if (!aIsProcessing && bIsProcessing) return 1;
+
+    // Priority 4: Finalized copies
+    const aIsFinalized = ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED'].includes(a.evaluationStatus);
+    const bIsFinalized = ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED'].includes(b.evaluationStatus);
+    if (aIsFinalized && !bIsFinalized) return -1;
+    if (!aIsFinalized && bIsFinalized) return 1;
+
+    // Priority 5: AI Failed copies
+    const aIsFailed = ['AI_FAILED', 'FAILED'].includes(a.evaluationStatus);
+    const bIsFailed = ['AI_FAILED', 'FAILED'].includes(b.evaluationStatus);
+    if (aIsFailed && !bIsFailed) return -1;
+    if (!aIsFailed && bIsFailed) return 1;
+
+    // Priority 6: Newest evaluated / created first
+    if (a.evaluatedAt && b.evaluatedAt) {
+      return new Date(b.evaluatedAt) - new Date(a.evaluatedAt);
+    }
+    if (a.evaluatedAt) return -1;
+    if (b.evaluatedAt) return 1;
+
+    return (a.copyId || '').localeCompare(b.copyId || '', undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   // Bulk Random Copy Selection (10, 20, 50, 100 or custom count)
   const handleSelectRandomCopies = (count) => {
-    const eligible = getEligibleCopies();
-    const availableCount = eligible.length;
+    const eligibleUnselected = getEligibleCopies().filter(
+      (c) => !selectedCopyIds.includes(c._id)
+    );
+    const availableCount = eligibleUnselected.length;
 
     if (availableCount === 0) {
       showToast(
-        `No eligible unprocessed copies available for ${
-          evaluationMode === 'MANUAL' ? 'Manual Check' : 'AI Check'
-        }.`,
+        `All eligible copies are already selected for assignment.`,
         'warning'
       );
       return;
@@ -165,28 +231,20 @@ const CopyAssignment = () => {
     const selectCount = Math.min(requestedCount, availableCount);
 
     // Fisher-Yates random shuffle to guarantee random selection
-    const shuffled = [...eligible];
+    const shuffled = [...eligibleUnselected];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    const selected = shuffled.slice(0, selectCount);
-    setSelectedCopyIds(selected.map((c) => c._id));
+    const newlySelected = shuffled.slice(0, selectCount);
+    const newlySelectedIds = newlySelected.map((c) => c._id);
+    setSelectedCopyIds((prev) => [...prev, ...newlySelectedIds]);
 
-    if (availableCount < requestedCount) {
-      showToast(
-        `Requested ${requestedCount} copies, but only ${availableCount} eligible copies are available. Selected all ${availableCount} random copies.`,
-        'info'
-      );
-    } else {
-      showToast(
-        `Successfully selected ${selectCount} random copies for ${
-          evaluationMode === 'MANUAL' ? 'Manual Check' : 'Check with AI'
-        }!`,
-        'success'
-      );
-    }
+    showToast(
+      `Selected ${selectCount} copies (${selectedCopyIds.length + selectCount} total). Removed from available list.`,
+      'success'
+    );
   };
 
   const selectAllUnassigned = () => {
@@ -248,6 +306,8 @@ const CopyAssignment = () => {
       return;
     }
 
+    const idsBeingEvaluated = [...selectedCopyIds];
+
     try {
       setAiProcessing(true);
       let evaluatedCopyForReview = null;
@@ -272,6 +332,12 @@ const CopyAssignment = () => {
         }
       }
 
+      // Add evaluated copies to recentlyEvaluatedIds so they immediately show at top of the list!
+      setRecentlyEvaluatedIds((prev) => [
+        ...idsBeingEvaluated,
+        ...prev.filter((id) => !idsBeingEvaluated.includes(id))
+      ]);
+
       setConfirmAiModal(false);
       await fetchCopiesForExam(selectedExamId);
 
@@ -293,6 +359,7 @@ const CopyAssignment = () => {
       const res = await api.post(`/answer-copies/${copyId}/ai-evaluate`, { force: true });
       if (res.data.success) {
         showToast(res.data.message || 'AI evaluation completed!', 'success');
+        setRecentlyEvaluatedIds((prev) => [copyId, ...prev.filter((id) => id !== copyId)]);
         await fetchCopiesForExam(selectedExamId);
         if (res.data.answerCopy) {
           openAiReviewModal(res.data.answerCopy);
@@ -366,7 +433,8 @@ const CopyAssignment = () => {
     // Validate all question marks
     for (const ans of reviewModalCopy.answers || []) {
       const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
-      const val = Number(reviewForm[qId]?.finalMarks);
+      const rawVal = reviewForm[qId]?.finalMarks;
+      const val = rawVal !== undefined && rawVal !== '' ? Number(rawVal) : (ans.finalMarks ?? ans.aiMarks ?? ans.marksAwarded ?? 0);
       if (isNaN(val) || val < 0 || val > ans.maxMarks) {
         showToast(
           `Invalid marks for Question ${ans.questionNumber}. Must be between 0 and ${ans.maxMarks}.`,
@@ -381,10 +449,12 @@ const CopyAssignment = () => {
       const questionMarksPayload = (reviewModalCopy.answers || []).map((ans) => {
         const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
         const entry = reviewForm[qId] || {};
+        const rawVal = entry.finalMarks;
+        const finalVal = rawVal !== undefined && rawVal !== '' ? Number(rawVal) : (ans.finalMarks ?? ans.aiMarks ?? ans.marksAwarded ?? 0);
         return {
           questionId: qId,
           questionNumber: ans.questionNumber,
-          finalMarks: Number(entry.finalMarks),
+          finalMarks: finalVal,
           comments: entry.comments || ''
         };
       });
@@ -396,6 +466,10 @@ const CopyAssignment = () => {
 
       if (res.data.success) {
         showToast(res.data.message || 'Evaluation finalized successfully! Status updated to FINALIZED.', 'success');
+        const finalizedId = reviewModalCopy._id;
+        setSelectedCopyIds((prev) => prev.filter((id) => id !== finalizedId));
+        setRecentlyEvaluatedIds((prev) => prev.filter((id) => id !== finalizedId));
+        setCopies((prev) => prev.filter((c) => c._id !== finalizedId));
         setReviewModalCopy(null);
         await fetchCopiesForExam(selectedExamId);
       }
@@ -431,9 +505,9 @@ const CopyAssignment = () => {
           {/* Left Column: Exam, Mode Selection & Assignment/AI Controls */}
           <div className="lg:col-span-1 space-y-6">
             {/* Step 1: Select Exam */}
-            <div className="surface-card p-5 rounded-xl border border-slate-800">
-              <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center space-x-2">
-                <span className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs flex items-center justify-center font-bold">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs flex items-center justify-center font-bold">
                   1
                 </span>
                 <span>Select Examination</span>
@@ -442,7 +516,7 @@ const CopyAssignment = () => {
               <select
                 value={selectedExamId}
                 onChange={(e) => setSelectedExamId(e.target.value)}
-                className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
               >
                 {exams.map((ex) => (
                   <option key={ex._id} value={ex._id}>
@@ -452,23 +526,23 @@ const CopyAssignment = () => {
               </select>
 
               {selectedExam && (
-                <div className="mt-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs space-y-1.5">
+                <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Subject:</span>
-                    <span className="font-semibold text-indigo-400">{selectedExam.subject}</span>
+                    <span className="text-slate-500">Subject:</span>
+                    <span className="font-semibold text-indigo-600">{selectedExam.subject}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Total Marks:</span>
-                    <span className="text-slate-200 font-mono">{selectedExam.maxMarks}</span>
+                    <span className="text-slate-500">Total Marks:</span>
+                    <span className="text-slate-800 font-mono font-bold">{selectedExam.maxMarks}</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Step 2: Evaluation Flow Option (Manual Check vs Check with AI) */}
-            <div className="surface-card p-5 rounded-xl border border-slate-800">
-              <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center space-x-2">
-                <span className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs flex items-center justify-center font-bold">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs flex items-center justify-center font-bold">
                   2
                 </span>
                 <span>Evaluation Option</span>
@@ -481,15 +555,15 @@ const CopyAssignment = () => {
                   onClick={() => setEvaluationMode('MANUAL')}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     evaluationMode === 'MANUAL'
-                      ? 'bg-indigo-950/40 border-indigo-500 ring-1 ring-indigo-500 text-white shadow-sm'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'bg-indigo-50/80 border-indigo-500 ring-1 ring-indigo-500 text-slate-900 shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center space-x-2 mb-1">
-                    <UserCheck className={`w-4 h-4 ${evaluationMode === 'MANUAL' ? 'text-indigo-400' : 'text-slate-400'}`} />
+                    <UserCheck className={`w-4 h-4 ${evaluationMode === 'MANUAL' ? 'text-indigo-600' : 'text-slate-400'}`} />
                     <span className="text-xs font-bold">Manual Check</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
                     Assign to subject-expert faculty evaluator for manual marking
                   </p>
                 </button>
@@ -500,15 +574,15 @@ const CopyAssignment = () => {
                   onClick={() => setEvaluationMode('AI')}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     evaluationMode === 'AI'
-                      ? 'bg-amber-950/30 border-amber-500 ring-1 ring-amber-500 text-white shadow-sm'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'bg-amber-50/80 border-amber-500 ring-1 ring-amber-500 text-slate-900 shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center space-x-2 mb-1">
-                    <Sparkles className={`w-4 h-4 ${evaluationMode === 'AI' ? 'text-amber-400' : 'text-slate-400'}`} />
+                    <Sparkles className={`w-4 h-4 ${evaluationMode === 'AI' ? 'text-amber-600' : 'text-slate-400'}`} />
                     <span className="text-xs font-bold">Check with AI</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
                     Automated Gemini AI rubric grading + Admin review
                   </p>
                 </button>
@@ -519,9 +593,9 @@ const CopyAssignment = () => {
             {evaluationMode === 'MANUAL' && (
               <>
                 {/* Step 3: Select Evaluator */}
-                <div className="surface-card p-5 rounded-xl border border-slate-800">
-                  <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3 flex items-center space-x-2">
-                    <span className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs flex items-center justify-center font-bold">
+                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs flex items-center justify-center font-bold">
                       3
                     </span>
                     <span>Select Faculty Evaluator</span>
@@ -530,7 +604,7 @@ const CopyAssignment = () => {
                   <select
                     value={selectedEvaluatorId}
                     onChange={(e) => setSelectedEvaluatorId(e.target.value)}
-                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
                   >
                     <option value="">-- Choose Evaluator --</option>
                     {evaluators.map((ev) => (
@@ -541,21 +615,21 @@ const CopyAssignment = () => {
                   </select>
 
                   {selectedEvaluator && (
-                    <div className="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs space-y-2">
+                    <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Evaluator:</span>
-                        <span className="font-semibold text-white">{selectedEvaluator.name}</span>
+                        <span className="text-slate-500">Evaluator:</span>
+                        <span className="font-semibold text-slate-800">{selectedEvaluator.name}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-1">Subjects:</span>
+                        <span className="text-slate-500 block mb-1">Subjects:</span>
                         <div className="flex flex-wrap gap-1">
                           {selectedEvaluator.subjects?.map((s, i) => (
                             <span
                               key={i}
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
                                 selectedExam && s.toLowerCase().trim() === selectedExam.subject.toLowerCase().trim()
-                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold'
-                                  : 'bg-slate-800 border-slate-700 text-slate-300'
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
                               }`}
                             >
                               {s}
@@ -566,21 +640,21 @@ const CopyAssignment = () => {
 
                       {/* Subject Match Indicator */}
                       {!isSubjectMatch ? (
-                        <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center space-x-1.5">
+                        <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center space-x-1.5">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                           <span>Warning: Not authorized for {selectedExam?.subject}</span>
                         </div>
                       ) : (
-                        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] flex items-center space-x-1.5">
+                        <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] flex items-center space-x-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                           <span>Subject Matched: Authorized</span>
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-slate-800">
-                        <div className="flex justify-between text-[11px] text-slate-400">
+                      <div className="pt-2 border-t border-slate-200">
+                        <div className="flex justify-between text-[11px] text-slate-500">
                           <span>Current Workload:</span>
-                          <span className="font-mono text-white">
+                          <span className="font-mono font-semibold text-slate-800">
                             {selectedEvaluator.workload?.activeAssigned || 0} / {selectedEvaluator.maxWorkload || 50} copies
                           </span>
                         </div>
@@ -590,10 +664,10 @@ const CopyAssignment = () => {
                 </div>
 
                 {/* Manual Action Card */}
-                <div className="surface-card p-5 rounded-xl border border-slate-800">
+                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-3 text-xs">
-                    <span className="text-slate-400">Selected for Assignment:</span>
-                    <span className="font-mono font-bold text-indigo-400 text-sm">
+                    <span className="text-slate-500">Selected for Assignment:</span>
+                    <span className="font-mono font-bold text-indigo-600 text-sm">
                       {selectedCopyIds.length} copies
                     </span>
                   </div>
@@ -604,7 +678,7 @@ const CopyAssignment = () => {
                     loading={assigning}
                     disabled={selectedCopyIds.length === 0 || !selectedEvaluatorId || !isSubjectMatch}
                     onClick={handleAssignCopies}
-                    className="w-full"
+                    className="w-full shadow-sm"
                   >
                     Assign Selected Copies
                   </Button>
@@ -616,35 +690,35 @@ const CopyAssignment = () => {
             {evaluationMode === 'AI' && (
               <>
                 {/* AI Configuration Info */}
-                <div className="surface-card p-5 rounded-xl border border-slate-800 space-y-3">
-                  <div className="flex items-center space-x-2 text-amber-400 font-semibold text-xs">
-                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center space-x-2 text-amber-600 font-semibold text-xs">
+                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
                     <span>Gemini AI Evaluation Engine</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Evaluates scanned answer copies against question paper, marking rubrics, and reference points directly using multimodal Google Gemini AI.
                   </p>
-                  <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1.5 text-[11px] text-slate-300">
-                    <div className="flex items-center space-x-1.5 text-emerald-400">
-                      <Check className="w-3.5 h-3.5" />
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-[11px] text-slate-700">
+                    <div className="flex items-center space-x-1.5 text-emerald-700 font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
                       <span>No human evaluator assignment required</span>
                     </div>
-                    <div className="flex items-center space-x-1.5 text-emerald-400">
-                      <Check className="w-3.5 h-3.5" />
+                    <div className="flex items-center space-x-1.5 text-emerald-700 font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Independent question-wise marks & feedback</span>
                     </div>
-                    <div className="flex items-center space-x-1.5 text-emerald-400">
-                      <Check className="w-3.5 h-3.5" />
+                    <div className="flex items-center space-x-1.5 text-emerald-700 font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Admin mark review & override before finalization</span>
                     </div>
                   </div>
                 </div>
 
                 {/* AI Action Card */}
-                <div className="surface-card p-5 rounded-xl border border-slate-800">
+                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-3 text-xs">
-                    <span className="text-slate-400">Selected for AI Check:</span>
-                    <span className="font-mono font-bold text-amber-400 text-sm">
+                    <span className="text-slate-500">Selected for AI Check:</span>
+                    <span className="font-mono font-bold text-amber-600 text-sm">
                       {selectedCopyIds.length} copies
                     </span>
                   </div>
@@ -656,7 +730,7 @@ const CopyAssignment = () => {
                     loading={aiProcessing}
                     disabled={selectedCopyIds.length === 0 || aiProcessing}
                     onClick={() => setConfirmAiModal(true)}
-                    className="w-full bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white shadow-md font-semibold"
+                    className="w-full bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white shadow-sm font-semibold border-none"
                   >
                     🤖 Check with AI
                   </Button>
@@ -665,77 +739,167 @@ const CopyAssignment = () => {
             )}
           </div>
 
-          {/* Right Column: Copies List & Checkbox Selection */}
-          <div className="lg:col-span-2">
-            <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
-              <div className="p-4 border-b border-slate-800 bg-slate-900/50">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-100 tracking-tight">Available Answer Copies</h4>
-                    <p className="text-xs text-slate-400">
-                      Showing submissions for {selectedExam?.name} ({copies.length} total)
-                    </p>
+          {/* Right Column: Staged Selected Copies & Available (Unselected) Copies */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* STAGED SELECTED COPIES SECTION */}
+            {selectedCopyIds.length > 0 && (
+              <div className="bg-white rounded-2xl border border-indigo-200 shadow-md overflow-hidden transition-all duration-300">
+                <div className="p-4 bg-indigo-50/70 border-b border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-sm font-bold text-slate-900 tracking-tight">
+                          Selected for Assignment
+                        </h4>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-indigo-600 text-white shadow-xs">
+                          {selectedCopyIds.length} copies
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        These copies are selected for assignment and removed from the available list below.
+                      </p>
+                    </div>
                   </div>
+
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={selectAllUnassigned}>
-                      Select All Unassigned
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedCopyIds([])}
-                      disabled={selectedCopyIds.length === 0}
+                      className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 shrink-0"
                     >
+                      <X className="w-3.5 h-3.5 mr-1" />
                       Clear Selection
                     </Button>
                   </div>
                 </div>
 
+                {/* List of selected copies with remove action */}
+                <div className="p-2.5 max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
+                  {selectedCopies.map((copy, index) => (
+                    <div
+                      key={copy._id}
+                      className="py-2.5 px-3 flex items-center justify-between hover:bg-slate-50 rounded-xl transition-colors group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs font-mono text-indigo-600 font-bold w-6">
+                          #{index + 1}
+                        </span>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono font-bold text-xs text-slate-900">
+                              {copy.copyId}
+                            </span>
+                            {copy.bookletNumber && (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                [{copy.bookletNumber}]
+                              </span>
+                            )}
+                            <Badge status={copy.evaluationStatus}>{copy.evaluationStatus}</Badge>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            {copy.candidateName || copy.student?.name || 'Candidate'} (
+                            {copy.candidateRollNo || copy.student?.studentRollNo || 'N/A'})
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleSelectCopy(copy._id)}
+                        className="px-2 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center space-x-1"
+                        title="Remove from selection and return to available list"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Deselect</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AVAILABLE ANSWER COPIES (Unselected Copies) */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-slate-100 bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 tracking-tight">Available Answer Copies</h4>
+                    <p className="text-xs text-slate-500">
+                      Showing {availableCopiesList.length} unselected copies for {selectedExam?.name} ({copies.length} total)
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllUnassigned}
+                      disabled={eligibleUnselectedCopies.length === 0}
+                    >
+                      Select All Unassigned
+                    </Button>
+                    {selectedCopyIds.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedCopyIds([])}
+                      >
+                        Clear Selection
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
                 {/* BULK RANDOM COPY SELECTION BAR */}
-                <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex items-center space-x-2.5">
-                    <span className="text-slate-400">
+                    <span className="text-slate-500">
                       Available Copies:{' '}
-                      <strong className="text-white font-mono font-bold text-xs">
-                        {eligibleCopies.length}
+                      <strong className="text-slate-900 font-mono font-bold text-xs">
+                        {eligibleUnselectedCopies.length}
                       </strong>
                     </span>
                     {selectedCopyIds.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 font-mono">
                         {selectedCopyIds.length} Selected
                       </span>
                     )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-slate-400 text-[11px] font-medium">Select Copies:</span>
+                    <span className="text-slate-500 text-[11px] font-medium">Select Copies:</span>
                     {[10, 20, 50, 100].map((num) => (
                       <button
                         key={num}
                         type="button"
                         onClick={() => handleSelectRandomCopies(num)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-indigo-600/30 hover:border-indigo-500/60 border border-slate-700 text-slate-200 font-mono font-bold text-xs transition-colors shadow-sm"
+                        disabled={eligibleUnselectedCopies.length === 0}
+                        className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-200 text-slate-700 font-mono font-bold text-xs transition-colors shadow-xs"
                       >
                         [ {num} ]
                       </button>
                     ))}
 
-                    <span className="text-slate-500 text-[11px]">or</span>
+                    <span className="text-slate-400 text-[11px]">or</span>
 
                     <div className="flex items-center space-x-1.5">
                       <input
                         type="number"
                         min="1"
-                        max={copies.length}
+                        max={eligibleUnselectedCopies.length || 1}
                         placeholder="Qty"
                         value={customRandomCount}
                         onChange={(e) => setCustomRandomCount(e.target.value)}
-                        className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-xs font-mono text-white focus:outline-none focus:border-indigo-500"
+                        className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-center text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-600"
                       />
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleSelectRandomCopies(customRandomCount || 10)}
+                        disabled={eligibleUnselectedCopies.length === 0}
                         className="text-xs font-semibold"
                       >
                         Select Random Copies
@@ -745,60 +909,97 @@ const CopyAssignment = () => {
                 </div>
               </div>
 
-
               {copies.length === 0 ? (
                 <EmptyState
                   title="No answer copies found"
                   message="There are no student submissions registered yet for this examination."
                 />
+              ) : availableCopiesList.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <h5 className="text-sm font-bold text-slate-900">All Copies Selected</h5>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    All {copies.length} copies are currently selected and staged for assignment in the section above.
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCopyIds([])}
+                    className="mt-4 text-xs text-indigo-600 hover:text-indigo-700"
+                  >
+                    Clear selection to view all available copies
+                  </Button>
+                </div>
               ) : (
-                <div className="divide-y divide-slate-800/60 max-h-[600px] overflow-y-auto">
-                  {copies.map((copy) => {
+                <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+                  {sortedAvailableCopies.map((copy) => {
                     const isSelected = selectedCopyIds.includes(copy._id);
-                    const isCompleted = ['COMPLETED', 'FINALIZED', 'ADMIN_REVIEWED'].includes(copy.evaluationStatus);
-                    const isAiProcessed = ['AI_EVALUATED', 'AI_REVIEWED', 'ADMIN_REVIEW', 'FINALIZED', 'ADMIN_REVIEWED'].includes(copy.evaluationStatus);
+                    const isFinalized = ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED'].includes(copy.evaluationStatus);
+                    const isAiEvaluated = copy.evaluationStatus === 'AI_EVALUATED' || copy.evaluationStatus === 'AI_REVIEW_PENDING';
+                    const isAiProcessed = isAiEvaluated || isFinalized;
                     const isAiFailed = ['AI_FAILED', 'FAILED'].includes(copy.evaluationStatus);
                     const isAiRunning = ['AI_PROCESSING', 'PROCESSING'].includes(copy.evaluationStatus);
+                    const isRecentlyEvaluated = recentlyEvaluatedIds.includes(copy._id);
 
                     return (
                       <div
                         key={copy._id}
-                        onClick={() => toggleSelectCopy(copy._id)}
+                        onClick={() => {
+                          if (!isFinalized && !isAiEvaluated) {
+                            toggleSelectCopy(copy._id);
+                          }
+                        }}
                         className={`p-4 flex items-center justify-between transition-colors ${
                           isSelected
-                            ? 'bg-indigo-600/10 border-l-4 border-indigo-500'
-                            : 'hover:bg-slate-800/30'
-                        } cursor-pointer`}
+                            ? 'bg-indigo-50/60 border-l-4 border-indigo-600'
+                            : isRecentlyEvaluated && isAiEvaluated
+                            ? 'bg-amber-50/60 border-l-4 border-amber-500'
+                            : isAiEvaluated
+                            ? 'bg-amber-50/30 border-l-2 border-amber-400 hover:bg-amber-50/60'
+                            : isFinalized
+                            ? 'bg-emerald-50/30 border-l-2 border-emerald-400 hover:bg-emerald-50/60'
+                            : 'hover:bg-slate-50'
+                        } ${!isFinalized && !isAiEvaluated ? 'cursor-pointer' : ''}`}
                       >
                         <div className="flex items-center space-x-3.5">
                           <button
                             type="button"
+                            disabled={isFinalized || isAiEvaluated}
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleSelectCopy(copy._id);
+                              if (!isFinalized && !isAiEvaluated) {
+                                toggleSelectCopy(copy._id);
+                              }
                             }}
-                            className="text-slate-400 hover:text-indigo-400"
+                            className={`${isFinalized || isAiEvaluated ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-slate-400 hover:text-indigo-600'}`}
                           >
                             {isSelected ? (
-                              <CheckSquare className="w-5 h-5 text-indigo-400" />
+                              <CheckSquare className="w-5 h-5 text-indigo-600" />
                             ) : (
-                              <Square className="w-5 h-5 text-slate-600" />
+                              <Square className="w-5 h-5 text-slate-400" />
                             )}
                           </button>
 
                           <div>
                             <div className="flex items-center space-x-2">
-                              <span className="font-mono font-bold text-sm text-white">{copy.copyId}</span>
+                              <span className="font-mono font-bold text-sm text-slate-900">{copy.copyId}</span>
                               <Badge status={copy.evaluationStatus}>{copy.evaluationStatus}</Badge>
+                              {isRecentlyEvaluated && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                                  Just Evaluated
+                                </span>
+                              )}
                               {copy.bookletNumber && (
                                 <span className="text-[10px] text-slate-400 font-mono">
                                   [{copy.bookletNumber}]
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-slate-400 mt-0.5">
+                            <p className="text-xs text-slate-500 mt-0.5">
                               Student:{' '}
-                              <span className="text-slate-200 font-medium">
+                              <span className="text-slate-800 font-medium">
                                 {copy.candidateName || copy.student?.name || 'Candidate'}
                               </span>{' '}
                               ({copy.candidateRollNo || copy.student?.studentRollNo || 'N/A'})
@@ -809,37 +1010,52 @@ const CopyAssignment = () => {
                         <div className="flex items-center space-x-3 text-right text-xs">
                           <div>
                             {copy.evaluationMode === 'AI' || copy.evaluationMode === 'AI_EVALUATION' || isAiProcessed ? (
-                              <span className="text-emerald-400 font-medium text-[11px] flex items-center space-x-1 justify-end">
-                                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span className="text-emerald-700 font-medium text-[11px] flex items-center space-x-1 justify-end">
+                                <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
                                 <span>AI System (No Evaluator)</span>
                               </span>
                             ) : copy.assignedEvaluator ? (
                               <div>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
+                                <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
                                   Assigned To
                                 </span>
-                                <span className="font-semibold text-slate-200">
+                                <span className="font-semibold text-slate-800">
                                   {copy.assignedEvaluator.name}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-amber-400/80 font-medium italic">Unassigned</span>
+                              <span className="text-amber-700 font-medium italic">Unassigned</span>
                             )}
 
                             {/* Score Display */}
-                            {copy.totalAwardedMarks !== null && copy.totalAwardedMarks !== undefined ? (
-                              <div className="text-[11px] font-mono text-emerald-400 font-bold mt-1">
+                            {isFinalized && copy.totalAwardedMarks !== null && copy.totalAwardedMarks !== undefined ? (
+                              <div className="text-[11px] font-mono text-emerald-700 font-bold mt-1">
                                 Final: {copy.finalTotal ?? copy.totalAwardedMarks} / {copy.totalMaxMarks} ({copy.percentage}%)
                               </div>
                             ) : copy.aiTotal !== null && copy.aiTotal !== undefined ? (
-                              <div className="text-[10px] font-mono text-amber-400/90 mt-1">
-                                AI: {copy.aiTotal} / {copy.totalMaxMarks}
+                              <div className="text-[11px] font-mono text-amber-700 font-bold mt-1">
+                                AI Score: {copy.aiTotal} / {copy.totalMaxMarks}
                               </div>
                             ) : null}
                           </div>
 
                           {/* Quick Action Buttons on Item */}
-                          {isAiProcessed && (
+                          {isAiEvaluated && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              icon={Edit3}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAiReviewModal(copy);
+                              }}
+                              className="text-xs bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white shadow-sm shrink-0 font-semibold border-none"
+                            >
+                              Review & Finalize
+                            </Button>
+                          )}
+
+                          {isFinalized && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -848,11 +1064,10 @@ const CopyAssignment = () => {
                                 e.stopPropagation();
                                 openAiReviewModal(copy);
                               }}
-                              className="text-[11px] text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/10 shrink-0"
+                              className="text-[11px] text-emerald-700 border-emerald-200 hover:bg-emerald-50 shrink-0"
                             >
-                              Review AI Evaluation
+                              Review / Edit
                             </Button>
-
                           )}
 
                           {isAiFailed && (
@@ -864,15 +1079,15 @@ const CopyAssignment = () => {
                                 e.stopPropagation();
                                 handleRetrySingleCopyAi(copy._id);
                               }}
-                              className="text-[11px] text-rose-300 border-rose-500/40 hover:bg-rose-500/10 shrink-0"
+                              className="text-[11px] text-rose-700 border-rose-200 hover:bg-rose-50 shrink-0"
                             >
                               Retry AI
                             </Button>
                           )}
 
                           {isAiRunning && (
-                            <span className="text-amber-400 text-xs flex items-center space-x-1 animate-pulse shrink-0">
-                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span className="text-amber-700 text-xs flex items-center space-x-1 animate-pulse shrink-0 font-medium">
+                              <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
                               <span>AI Evaluating...</span>
                             </span>
                           )}
@@ -894,35 +1109,35 @@ const CopyAssignment = () => {
         title="Evaluate Scanned Copy with AI?"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-            <div className="flex items-center space-x-2 text-amber-400 font-semibold text-sm">
-              <Sparkles className="w-4 h-4" />
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center space-x-2 text-amber-700 font-bold text-sm">
+              <Sparkles className="w-4 h-4 text-amber-600" />
               <span>Gemini AI Evaluation Confirmation</span>
             </div>
-            <p className="leading-relaxed text-slate-300">
+            <p className="leading-relaxed text-slate-700">
               This answer copy will be automatically evaluated using the configured AI evaluation system.
             </p>
-            <p className="leading-relaxed text-slate-400 text-[11px]">
+            <p className="leading-relaxed text-slate-500 text-[11px]">
               The generated marks and feedback can be reviewed and modified by the Admin after evaluation.
             </p>
-            <div className="pt-2 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+            <div className="pt-2 border-t border-slate-200 text-[11px] font-mono text-slate-500 flex items-center justify-between">
               <span>
-                Selected Copies: <strong className="text-white">{selectedCopyIds.length}</strong>
+                Selected Copies: <strong className="text-slate-900">{selectedCopyIds.length}</strong>
               </span>
               <span>
-                Subject: <strong className="text-indigo-400">{selectedExam?.subject}</strong>
+                Subject: <strong className="text-indigo-600 font-semibold">{selectedExam?.subject}</strong>
               </span>
             </div>
           </div>
 
           {aiProcessing && (
-            <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center space-x-2 animate-pulse">
-              <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center space-x-2 animate-pulse font-medium">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
               <span>AI is evaluating the answer copy... Please wait.</span>
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-2">
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
             <Button
               variant="outline"
               size="sm"
@@ -937,7 +1152,7 @@ const CopyAssignment = () => {
               icon={Sparkles}
               loading={aiProcessing}
               onClick={handleStartAiEvaluation}
-              className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium"
+              className="bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-medium border-none"
             >
               Check with AI
             </Button>
@@ -954,10 +1169,10 @@ const CopyAssignment = () => {
       >
         <div className="space-y-4 text-xs max-h-[75vh] overflow-y-auto pr-1">
           {/* Header Summary */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 grid grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-3">
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase">Candidate</span>
-              <span className="font-semibold text-slate-100">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Candidate</span>
+              <span className="font-semibold text-slate-800">
                 {reviewModalCopy?.candidateName || reviewModalCopy?.student?.name || 'Candidate'}
               </span>
               <span className="text-[10px] text-slate-400 block font-mono">
@@ -965,32 +1180,32 @@ const CopyAssignment = () => {
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase">Subject & Booklet</span>
-              <span className="font-semibold text-indigo-400">{selectedExam?.subject}</span>
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Subject & Booklet</span>
+              <span className="font-semibold text-indigo-600">{selectedExam?.subject}</span>
               <span className="text-[10px] text-slate-400 block font-mono">
                 Booklet: {reviewModalCopy?.bookletNumber || 'N/A'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase">Evaluation Status</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 inline-block mt-0.5">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Evaluation Status</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mt-0.5">
                 {reviewModalCopy?.evaluationStatus}
               </span>
             </div>
           </div>
 
           {/* Question-wise AI Marks and Final Marks Review Table */}
-          <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
-            <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-              <span className="font-bold text-white uppercase text-[11px] tracking-wider">
+          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+            <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span className="font-bold text-slate-800 uppercase text-[11px] tracking-wider">
                 Question-Wise AI Marks & Feedback
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 Modify final marks if required. Original AI marks remain preserved.
               </span>
             </div>
 
-            <div className="divide-y divide-slate-800/80">
+            <div className="divide-y divide-slate-100">
               {(reviewModalCopy?.answers || []).map((ans) => {
                 const qId = (ans.question?._id || ans.question)?.toString() || String(ans.questionNumber);
                 const maxMarks = ans.maxMarks || 10;
@@ -1000,42 +1215,52 @@ const CopyAssignment = () => {
                 const isModified = Number(currentFinal) !== Number(aiScore);
 
                 return (
-                  <div key={qId} className="p-4 space-y-3 hover:bg-slate-900/30 transition-colors">
+                  <div key={qId} className="p-4 space-y-3 hover:bg-slate-50 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono font-bold text-indigo-400 text-xs">
+                          <span className="font-mono font-bold text-indigo-600 text-xs">
                             Q{ans.questionNumber}
                           </span>
                           <span className="text-[11px] text-slate-400 font-mono">
                             (Max: {maxMarks} marks)
                           </span>
                           {isModified && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                               Modified by Admin
                             </span>
                           )}
                         </div>
                         {ans.question?.questionText && (
-                          <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                          <p className="text-xs text-slate-700 font-medium leading-relaxed">
                             {ans.question.questionText}
                           </p>
+                        )}
+                        {ans.studentAnswer && (
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5">
+                              Student's Answer:
+                            </span>
+                            <p className="whitespace-pre-wrap font-sans text-slate-800 leading-relaxed">
+                              {ans.studentAnswer}
+                            </p>
+                          </div>
                         )}
                       </div>
 
                       {/* Marks Awarded Column: AI Marks vs Final Marks Input */}
-                      <div className="flex items-center space-x-3 shrink-0 bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                      <div className="flex items-center space-x-3 shrink-0 bg-slate-50 p-2 rounded-xl border border-slate-200">
                         <div className="text-center">
-                          <span className="text-[10px] text-slate-400 block font-sans">AI Marks</span>
-                          <span className="font-mono font-bold text-amber-400 text-xs">
+                          <span className="text-[10px] text-slate-500 block font-sans">AI Marks</span>
+                          <span className="font-mono font-bold text-amber-700 text-xs">
                             {aiScore} / {maxMarks}
                           </span>
                         </div>
 
-                        <div className="h-6 w-px bg-slate-800" />
+                        <div className="h-6 w-px bg-slate-200" />
 
                         <div>
-                          <label className="text-[10px] text-slate-400 block font-sans">
+                          <label className="text-[10px] text-slate-500 block font-sans">
                             Final Marks
                           </label>
                           <input
@@ -1045,7 +1270,7 @@ const CopyAssignment = () => {
                             step="0.5"
                             value={currentFinal}
                             onChange={(e) => handleReviewMarkChange(qId, e.target.value, maxMarks)}
-                            className="w-16 bg-slate-950 border border-indigo-500/50 rounded px-2 py-1 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-indigo-400"
+                            className="w-16 bg-white border border-indigo-400 rounded px-2 py-1 text-xs font-mono font-bold text-slate-900 text-center focus:outline-none focus:border-indigo-600"
                           />
                         </div>
                       </div>
@@ -1053,8 +1278,8 @@ const CopyAssignment = () => {
 
                     {/* AI Feedback */}
                     {ans.aiFeedback && (
-                      <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-300">
-                        <span className="font-semibold text-amber-400/90 mr-1.5">AI Feedback:</span>
+                      <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-100 text-[11px] text-slate-700">
+                        <span className="font-semibold text-amber-700 mr-1.5">AI Feedback:</span>
                         <span>{ans.aiFeedback}</span>
                       </div>
                     )}
@@ -1066,7 +1291,7 @@ const CopyAssignment = () => {
                         placeholder="Admin Comment (e.g. Additional marks awarded for thorough architectural clarity)"
                         value={currentComment}
                         onChange={(e) => handleReviewCommentChange(qId, e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
                       />
                     </div>
                   </div>
@@ -1077,7 +1302,7 @@ const CopyAssignment = () => {
 
           {/* Overall Comments */}
           <div>
-            <label className="block text-slate-300 font-semibold mb-1 text-xs">
+            <label className="block text-slate-700 font-semibold mb-1 text-xs">
               Overall Review Comment
             </label>
             <textarea
@@ -1085,22 +1310,22 @@ const CopyAssignment = () => {
               value={reviewOverallComment}
               onChange={(e) => setReviewOverallComment(e.target.value)}
               placeholder="Admin remarks on overall answer copy..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
             />
           </div>
 
           {/* Totals Summary Footer */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs font-mono">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs font-mono">
             <div>
-              <span className="text-slate-400 block text-[10px]">Original AI Total</span>
-              <span className="font-bold text-amber-400 text-sm">
+              <span className="text-slate-500 block text-[10px]">Original AI Total</span>
+              <span className="font-bold text-amber-700 text-sm">
                 {reviewModalCopy?.aiTotal ?? 0} / {reviewModalCopy?.totalMaxMarks ?? selectedExam?.maxMarks ?? 100}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[10px]">Final Total (Calculated)</span>
-              <span className="font-bold text-emerald-400 text-sm">
+              <span className="text-slate-500 block text-[10px]">Final Total (Calculated)</span>
+              <span className="font-bold text-emerald-700 text-sm">
                 {calculateModalFinalTotal()} / {reviewModalCopy?.totalMaxMarks ?? selectedExam?.maxMarks ?? 100}
               </span>
             </div>
@@ -1120,11 +1345,10 @@ const CopyAssignment = () => {
                 icon={CheckCircle2}
                 loading={savingFinalMarks}
                 onClick={handleSaveFinalMarks}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm border-none"
               >
                 Finalize Evaluation
               </Button>
-
             </div>
           </div>
         </div>

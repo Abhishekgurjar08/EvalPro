@@ -169,27 +169,27 @@ const LiveExamSession = () => {
   const answeredCount = Object.values(answers).filter((txt) => (txt || '').trim().length > 0).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col">
       {/* Top Session Bar */}
-      <header className="h-16 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
         <div>
-          <h2 className="text-sm font-semibold text-slate-100 tracking-tight">{examData?.name}</h2>
-          <p className="text-[11px] text-slate-400">
-            Subject: <span className="text-indigo-400 font-semibold">{examData?.subject}</span> • Code: {examData?.code}
+          <h2 className="text-sm font-semibold text-slate-900 tracking-tight">{examData?.name}</h2>
+          <p className="text-[11px] text-slate-500">
+            Subject: <span className="text-indigo-600 font-semibold">{examData?.subject}</span> • Code: {examData?.code}
           </p>
         </div>
 
         {/* Center Timer */}
-        <div className="flex items-center space-x-2 px-4 py-1.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-sm">
-          <Clock className={`w-4 h-4 ${timeLeftSeconds < 600 ? 'text-rose-400 animate-pulse' : 'text-indigo-400'}`} />
-          <span className={`font-bold ${timeLeftSeconds < 600 ? 'text-rose-400 font-bold' : 'text-white'}`}>
+        <div className="flex items-center space-x-2 px-4 py-1.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-sm shadow-2xs">
+          <Clock className={`w-4 h-4 ${timeLeftSeconds < 600 ? 'text-rose-600 animate-pulse' : 'text-indigo-600'}`} />
+          <span className={`font-bold ${timeLeftSeconds < 600 ? 'text-rose-600 font-bold' : 'text-slate-900'}`}>
             {formatTimer(timeLeftSeconds)}
           </span>
         </div>
 
         {/* Right Actions */}
         <div className="flex items-center space-x-4">
-          <span className="text-[11px] text-slate-400 hidden sm:inline-block font-mono">
+          <span className="text-[11px] text-slate-400 hidden sm:inline-block font-mono font-medium">
             {autosaveStatus}
           </span>
           <Button
@@ -207,10 +207,10 @@ const LiveExamSession = () => {
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column: Question Palette */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="surface-card p-5 rounded-xl border border-slate-800 space-y-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold uppercase tracking-wider text-slate-400">Question Palette</span>
-              <span className="font-mono text-indigo-400 font-bold">
+              <span className="font-semibold uppercase tracking-wider text-slate-500">Question Palette</span>
+              <span className="font-mono text-indigo-600 font-bold">
                 {answeredCount} / {questions.length} Answered
               </span>
             </div>
@@ -228,10 +228,10 @@ const LiveExamSession = () => {
                     onClick={() => setActiveQuestionIdx(idx)}
                     className={`h-9 rounded-lg font-mono text-xs font-semibold transition-all flex items-center justify-center border ${
                       isActive
-                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-sm'
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
                         : isAnswered
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     Q{idx + 1}
@@ -240,17 +240,17 @@ const LiveExamSession = () => {
               })}
             </div>
 
-            <div className="pt-3 border-t border-slate-800 text-[11px] space-y-1 text-slate-400">
+            <div className="pt-3 border-t border-slate-100 text-[11px] space-y-1 text-slate-500">
               <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded bg-emerald-500/20 border border-emerald-500/40" />
+                <span className="w-2.5 h-2.5 rounded bg-emerald-500 border border-emerald-600" />
                 <span>Answered</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded bg-slate-900 border border-slate-800" />
+                <span className="w-2.5 h-2.5 rounded bg-slate-100 border border-slate-300" />
                 <span>Unanswered</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded bg-indigo-600 border border-indigo-400" />
+                <span className="w-2.5 h-2.5 rounded bg-indigo-600 border border-indigo-600" />
                 <span>Current Question</span>
               </div>
             </div>
@@ -259,32 +259,32 @@ const LiveExamSession = () => {
 
         {/* Right Column: Question Content & Rich Text Area */}
         <div className="lg:col-span-3 flex flex-col space-y-4">
-          <div className="surface-card p-5 rounded-xl border border-slate-800 flex-1 flex flex-col justify-between space-y-5">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex-1 flex flex-col justify-between space-y-5">
             <div>
               {/* Question Header */}
-              <div className="flex justify-between items-start pb-4 border-b border-slate-800">
+              <div className="flex justify-between items-start pb-4 border-b border-slate-100">
                 <div className="flex items-start space-x-3">
-                  <span className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 font-mono font-bold text-sm flex items-center justify-center shrink-0 border border-indigo-500/20">
+                  <span className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 font-mono font-bold text-sm flex items-center justify-center shrink-0 border border-indigo-200">
                     Q{activeQuestionIdx + 1}
                   </span>
                   <div>
-                    <h3 className="text-base font-bold text-white leading-relaxed">
+                    <h3 className="text-base font-bold text-slate-900 leading-relaxed">
                       {currentQ?.question?.questionText}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1 font-mono">
+                    <p className="text-xs text-slate-500 mt-1 font-mono">
                       {currentQ?.question?.unit} • {currentQ?.question?.topic}
                     </p>
                   </div>
                 </div>
 
-                <span className="px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 font-mono font-bold text-xs text-indigo-400 shrink-0 ml-3">
+                <span className="px-3 py-1 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-xs text-indigo-600 shrink-0 ml-3">
                   {currentQ?.marks} Marks
                 </span>
               </div>
 
               {/* Student Answer Text Area */}
               <div className="mt-5 space-y-2">
-                <label className="block text-xs font-semibold text-slate-300">
+                <label className="block text-xs font-semibold text-slate-700">
                   Your Answer (Drafting in real-time)
                 </label>
                 <textarea
@@ -292,13 +292,13 @@ const LiveExamSession = () => {
                   value={answers[currentQId] || ''}
                   onChange={(e) => handleAnswerChange(currentQId, e.target.value)}
                   placeholder="Type your structured answer here. Formulate key principles, sequence definitions, equations, and technical explanations..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-sans leading-relaxed resize-y"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 font-sans leading-relaxed resize-y shadow-2xs"
                 />
               </div>
             </div>
 
             {/* Bottom Nav between questions */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
               <Button
                 variant="secondary"
                 size="md"
@@ -310,7 +310,7 @@ const LiveExamSession = () => {
               </Button>
 
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-slate-500 font-mono">
                   {answers[currentQId]?.trim() ? `${answers[currentQId].split(/\s+/).length} words` : '0 words'}
                 </span>
               </div>
@@ -346,23 +346,23 @@ const LiveExamSession = () => {
         title="Submit Examination Confirmation"
       >
         <div className="space-y-4 text-xs">
-          <p className="text-slate-300 leading-relaxed">
-            You have completed <strong className="text-emerald-400 font-mono text-sm">{answeredCount}</strong> of{' '}
-            <strong className="text-white font-mono text-sm">{questions.length}</strong> questions.
+          <p className="text-slate-600 leading-relaxed">
+            You have completed <strong className="text-emerald-600 font-mono text-sm">{answeredCount}</strong> of{' '}
+            <strong className="text-slate-900 font-mono text-sm">{questions.length}</strong> questions.
           </p>
 
           {answeredCount < questions.length && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 shrink-0" />
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
               <span>You have {questions.length - answeredCount} unanswered question(s).</span>
             </div>
           )}
 
-          <p className="text-slate-400">
+          <p className="text-slate-500">
             Once submitted, your answers will be permanently saved and a unique digital answer copy will be generated for faculty evaluation. You will not be able to modify your answers.
           </p>
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
             <Button variant="ghost" onClick={() => setSubmitConfirmOpen(false)}>
               Continue Working
             </Button>

@@ -46,8 +46,8 @@ const ReportsAnalytics = () => {
 
       {/* AI Evaluation Comparison KPI Strip */}
       <div className="mb-8">
-        <div className="flex items-center space-x-2 text-sm font-bold text-white mb-4">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
+        <div className="flex items-center space-x-2 text-sm font-bold text-slate-900 mb-4">
+          <Sparkles className="w-4 h-4 text-indigo-600" />
           <span>AI vs Evaluator Comparative Accuracy & Acceptance</span>
         </div>
 
@@ -84,19 +84,19 @@ const ReportsAnalytics = () => {
       </div>
 
       {/* Detailed AI vs Human Comparison Table */}
-      <div className="surface-card rounded-xl border border-slate-800 mb-10 overflow-hidden">
-        <div className="p-5 border-b border-slate-800 bg-slate-900/50">
-          <h3 className="text-sm font-semibold text-slate-100 tracking-tight">
+      <div className="bg-white rounded-2xl border border-slate-200/80 mb-10 overflow-hidden shadow-sm">
+        <div className="p-5 border-b border-slate-200 bg-slate-50/80">
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight">
             Raw Empirical AI vs Evaluator Comparison Log
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Transparent question-by-question scoring comparison showing AI suggested marks vs human final decision.
           </p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
               <tr>
                 <th className="py-3.5 px-4">Evaluated Question</th>
                 <th className="py-3.5 px-4">Max Marks</th>
@@ -107,29 +107,29 @@ const ReportsAnalytics = () => {
                 <th className="py-3.5 px-4 text-right">Engine Model</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {aiMetrics.comparisons?.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-8 text-center text-slate-500">
+                  <td colSpan="7" className="py-8 text-center text-slate-400">
                     No AI evaluation comparisons recorded yet. Run AI grading in Evaluator workspace to generate comparison data.
                   </td>
                 </tr>
               ) : (
                 aiMetrics.comparisons?.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 font-medium text-white max-w-sm truncate">
+                  <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-slate-900 max-w-sm truncate">
                       {c.questionText}
                     </td>
                     <td className="py-3.5 px-4 font-mono">{c.maxMarks}</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-400">
+                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-600">
                       {c.aiSuggestedMarks}
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">
                       {c.evaluatorFinalMarks !== null ? c.evaluatorFinalMarks : '—'}
                     </td>
                     <td className="py-3.5 px-4 font-mono">
                       {c.difference !== undefined ? (
-                        <span className={c.difference === 0 ? 'text-emerald-400' : 'text-amber-400'}>
+                        <span className={c.difference === 0 ? 'text-emerald-600 font-semibold' : 'text-amber-700 font-semibold'}>
                           {c.difference === 0 ? '0 (Identical)' : `±${c.difference}`}
                         </span>
                       ) : (
@@ -145,7 +145,7 @@ const ReportsAnalytics = () => {
                         <Badge status="PENDING">Pending</Badge>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono text-[10px] text-slate-400">
+                    <td className="py-3.5 px-4 text-right font-mono text-[10px] text-slate-500">
                       {c.modelUsed}
                     </td>
                   </tr>
@@ -159,36 +159,36 @@ const ReportsAnalytics = () => {
       {/* Two Column Section: Exam Performance & Evaluator Workload */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Examination Summary */}
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-800 bg-slate-900/50">
-            <h4 className="text-xs font-semibold text-slate-200 tracking-tight flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
+        <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/80">
+            <h4 className="text-xs font-bold text-slate-800 tracking-tight flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-indigo-600" />
               <span>Examination Status & Completion Rates</span>
             </h4>
           </div>
 
-          <div className="divide-y divide-slate-800/60 text-xs">
+          <div className="divide-y divide-slate-100 text-xs">
             {examReports.map((ex) => (
-              <div key={ex.id} className="p-4 hover:bg-slate-800/30 transition-colors">
+              <div key={ex.id} className="p-4 hover:bg-slate-50/80 transition-colors">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <span className="font-semibold text-slate-100">{ex.name}</span>
-                    <span className="text-[11px] text-slate-400 ml-2 font-mono">({ex.code})</span>
+                    <span className="font-semibold text-slate-900">{ex.name}</span>
+                    <span className="text-[11px] text-slate-500 ml-2 font-mono">({ex.code})</span>
                   </div>
                   <Badge status={ex.status}>{ex.status}</Badge>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-slate-400 pt-2 border-t border-slate-800/60">
+                <div className="grid grid-cols-3 gap-2 text-slate-500 pt-2 border-t border-slate-100">
                   <div>
                     <span>Total Copies:</span>{' '}
-                    <strong className="text-white font-mono">{ex.totalCopies}</strong>
+                    <strong className="text-slate-900 font-mono">{ex.totalCopies}</strong>
                   </div>
                   <div>
                     <span>Completed:</span>{' '}
-                    <strong className="text-emerald-400 font-mono">{ex.completedCopies}</strong>
+                    <strong className="text-emerald-600 font-mono">{ex.completedCopies}</strong>
                   </div>
                   <div>
                     <span>Pending:</span>{' '}
-                    <strong className="text-amber-400 font-mono">{ex.pendingCopies}</strong>
+                    <strong className="text-amber-700 font-mono">{ex.pendingCopies}</strong>
                   </div>
                 </div>
               </div>
@@ -197,29 +197,29 @@ const ReportsAnalytics = () => {
         </div>
 
         {/* Evaluator Workload Table */}
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-800 bg-slate-900/50">
-            <h4 className="text-xs font-semibold text-slate-200 tracking-tight flex items-center space-x-2">
-              <UserCheck className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/80">
+            <h4 className="text-xs font-bold text-slate-800 tracking-tight flex items-center space-x-2">
+              <UserCheck className="w-4 h-4 text-emerald-600" />
               <span>Faculty Evaluator Workloads</span>
             </h4>
           </div>
 
-          <div className="divide-y divide-slate-800/60 text-xs">
+          <div className="divide-y divide-slate-100 text-xs">
             {evaluatorReports.map((ev) => (
-              <div key={ev.id} className="p-4 hover:bg-slate-800/30 transition-colors">
+              <div key={ev.id} className="p-4 hover:bg-slate-50/80 transition-colors">
                 <div className="flex justify-between items-center mb-1.5">
-                  <span className="font-bold text-white">{ev.name}</span>
-                  <span className="text-slate-400 text-[11px]">{ev.department}</span>
+                  <span className="font-bold text-slate-900">{ev.name}</span>
+                  <span className="text-slate-500 text-[11px]">{ev.department}</span>
                 </div>
-                <div className="flex justify-between text-slate-400 text-[11px] mb-1">
+                <div className="flex justify-between text-slate-500 text-[11px] mb-1">
                   <span>
-                    Allocated: <strong className="text-white font-mono">{ev.assigned}</strong> / Max{' '}
+                    Allocated: <strong className="text-slate-900 font-mono">{ev.assigned}</strong> / Max{' '}
                     {ev.maxWorkload}
                   </span>
                   <span>{ev.completionRate}% finished</span>
                 </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${ev.completionRate}%` }}

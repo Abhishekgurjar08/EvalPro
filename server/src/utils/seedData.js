@@ -165,7 +165,7 @@ const seedDatabase = async () => {
     });
 
     // 4. Syllabus
-    await Syllabus.create({
+    const syllabus = await Syllabus.create({
       examination: examination._id,
       subject: 'Computer Networks',
       units: [
@@ -206,8 +206,11 @@ const seedDatabase = async () => {
           ]
         }
       ],
-      createdBy: setter._id
+      createdBy: admin._id
     });
+
+    examination.assignedSyllabus = syllabus._id;
+    await examination.save();
 
     // 5. Questions with Rubrics
     // Q1: OSI Model

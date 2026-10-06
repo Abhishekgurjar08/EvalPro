@@ -323,27 +323,27 @@ const QuestionBank = () => {
                 <div
                   key={subj.name}
                   onClick={() => handleSelectSubject(subj.name)}
-                  className="surface-card p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+                  className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:border-indigo-500/40 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                      <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 group-hover:scale-105 transition-transform">
                         <BookMarked className="w-5 h-5" />
                       </div>
-                      <span className="font-mono text-xs px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-300 font-semibold">
+                      <span className="font-mono text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
                         {subj.questionCount} {subj.questionCount === 1 ? 'Question' : 'Questions'}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors tracking-tight">
+                    <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">
                       {subj.name}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                       Questions and rubric criteria organized specifically for {subj.name}.
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-medium text-indigo-400 group-hover:text-indigo-300">
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:text-indigo-700">
                     <span>Manage Questions</span>
                     <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -362,7 +362,7 @@ const QuestionBank = () => {
         >
           <form onSubmit={handleCreateNewSubject} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Subject Name *
               </label>
               <input
@@ -372,11 +372,11 @@ const QuestionBank = () => {
                 placeholder="e.g. Operating System, Compiler Design..."
                 value={newSubjectName}
                 onChange={(e) => setNewSubjectName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
               />
             </div>
 
-            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-800">
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-slate-200">
               <Button
                 variant="ghost"
                 onClick={() => setNewSubjectModalOpen(false)}
@@ -402,14 +402,14 @@ const QuestionBank = () => {
       <div className="mb-4 flex items-center justify-between">
         <button
           onClick={handleBackToSubjects}
-          className="inline-flex items-center space-x-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20"
+          className="inline-flex items-center space-x-2 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 shadow-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to All Subjects</span>
         </button>
 
-        <span className="text-xs text-slate-400">
-          Viewing: <strong className="text-white">{selectedSubject}</strong> ({questions.length} questions)
+        <span className="text-xs text-slate-500">
+          Viewing: <strong className="text-slate-900 font-semibold">{selectedSubject}</strong> ({questions.length} questions)
         </span>
       </div>
 
@@ -425,7 +425,7 @@ const QuestionBank = () => {
       />
 
       {/* Filter and Search Bar */}
-      <div className="surface-card p-4 rounded-xl border border-slate-800 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
           <input
@@ -434,7 +434,7 @@ const QuestionBank = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchQuestionsForSubject(selectedSubject)}
-            className="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
+            className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           />
         </div>
 
@@ -442,7 +442,7 @@ const QuestionBank = () => {
           <select
             value={filterDifficulty}
             onChange={(e) => setFilterDifficulty(e.target.value)}
-            className="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           >
             <option value="">All Difficulties</option>
             <option value="EASY">Easy</option>
@@ -453,7 +453,7 @@ const QuestionBank = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
           >
             <option value="">All Types</option>
             <option value="DESCRIPTIVE">Descriptive</option>
@@ -491,31 +491,31 @@ const QuestionBank = () => {
           {questions.map((q) => (
             <div
               key={q._id}
-              className="surface-card p-5 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between gap-4"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between gap-4 hover:border-slate-300 transition-all"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex items-center space-x-2.5">
                   <Badge status={q.difficulty}>{q.difficulty}</Badge>
-                  <span className="text-[11px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-semibold">
+                  <span className="text-[11px] font-mono text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200 font-semibold">
                     {q.subject}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                  <span className="text-[11px] font-mono text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 font-medium">
                     {q.unit} • {q.topic}
                   </span>
-                  <span className="text-[11px] font-mono font-bold text-emerald-400">
+                  <span className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                     {q.marks} Marks
                   </span>
                 </div>
 
-                <h4 className="text-sm font-bold text-white tracking-tight leading-snug">
+                <h4 className="text-sm font-bold text-slate-900 tracking-tight leading-snug">
                   {q.questionText}
                 </h4>
 
                 {q.rubric?.criteria && (
-                  <div className="flex items-center space-x-2 text-xs text-slate-400">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <div className="flex items-center space-x-2 text-xs text-slate-500">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                     <span>
-                      Marking Rubric: <strong className="text-slate-200">{q.rubric.criteria.length} criteria defined</strong>
+                      Marking Rubric: <strong className="text-slate-800">{q.rubric.criteria.length} criteria defined</strong>
                     </span>
                   </div>
                 )}
@@ -531,7 +531,7 @@ const QuestionBank = () => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                   icon={Trash2}
                   onClick={() => handleDeleteQuestion(q._id)}
                 >
@@ -556,14 +556,14 @@ const QuestionBank = () => {
       >
         <form onSubmit={handleSubmitQuestion} className="space-y-5 max-h-[75vh] overflow-y-auto pr-2">
           {/* Automatic Subject Association Indicator */}
-          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <BookMarked className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs text-slate-300">
-                Subject Association: <strong className="text-indigo-300 font-bold">{selectedSubject}</strong>
+              <BookMarked className="w-4 h-4 text-indigo-600" />
+              <span className="text-xs text-slate-700">
+                Subject Association: <strong className="text-indigo-700 font-bold">{selectedSubject}</strong>
               </span>
             </div>
-            <span className="text-[10px] text-indigo-400 font-mono bg-indigo-500/20 px-2 py-0.5 rounded">
+            <span className="text-[10px] text-indigo-700 font-mono font-semibold bg-indigo-100 px-2 py-0.5 rounded-md">
               Auto-Associated
             </span>
           </div>
@@ -571,33 +571,33 @@ const QuestionBank = () => {
           {/* Metadata row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 mb-1">Unit</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Unit</label>
               <input
                 type="text"
                 required
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 placeholder="Unit 1"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 mb-1">Marks</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Marks</label>
               <input
                 type="number"
                 min="1"
                 required
                 value={formData.marks}
                 onChange={(e) => setFormData({ ...formData, marks: Number(e.target.value) })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-indigo-400 font-bold focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-indigo-600 font-bold focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-mono"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 mb-1">Difficulty</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Difficulty</label>
               <select
                 value={formData.difficulty}
                 onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
               >
                 <option value="EASY">EASY</option>
                 <option value="MEDIUM">MEDIUM</option>
@@ -607,35 +607,35 @@ const QuestionBank = () => {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-300 mb-1">Topic</label>
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Topic</label>
             <input
               type="text"
               required
               value={formData.topic}
               onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
               placeholder="e.g. Memory Management / CPU Scheduling"
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
             />
           </div>
 
           {/* Question Text */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Question Text *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Question Text *</label>
             <textarea
               required
               rows="2"
               value={formData.questionText}
               onChange={(e) => setFormData({ ...formData, questionText: e.target.value })}
               placeholder="State the question clearly..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
             />
           </div>
 
           {/* Reference / Expected Answer */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
               <span>Expected Reference Answer (Critical for Evaluator & AI Benchmarking) *</span>
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
             </label>
             <textarea
               required
@@ -643,28 +643,28 @@ const QuestionBank = () => {
               value={formData.expectedAnswer}
               onChange={(e) => setFormData({ ...formData, expectedAnswer: e.target.value })}
               placeholder="Provide the complete canonical solution, keywords, equations, or structural points expected in an ideal answer..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono leading-relaxed"
+              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-mono leading-relaxed"
             />
           </div>
 
           {/* MARKING RUBRIC BUILDER */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h5 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <h5 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Question-Specific Marking Rubric</span>
                 </h5>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Define discrete criteria and weights. Criteria sum must not exceed question max marks.
                 </p>
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] text-slate-400 block uppercase">Rubric Total:</span>
+                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Rubric Total:</span>
                 <span
                   className={`text-sm font-bold font-mono ${
-                    isRubricValid ? 'text-emerald-400' : 'text-rose-400'
+                    isRubricValid ? 'text-emerald-600' : 'text-rose-600'
                   }`}
                 >
                   {rubricSum} / {formData.marks} Marks
@@ -675,30 +675,30 @@ const QuestionBank = () => {
             {/* Criteria Rows */}
             <div className="space-y-3 pt-2">
               {formData.rubricCriteria.map((crit, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-xs">
                   <div className="flex items-center space-x-2">
                     <input
                       type="text"
                       placeholder="Criterion Name (e.g. Core Principle Explanation)"
                       value={crit.name}
                       onChange={(e) => updateRubricCriterion(idx, 'name', e.target.value)}
-                      className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500"
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-semibold focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                     />
                     <div className="flex items-center space-x-1">
-                      <span className="text-xs text-slate-400">Max:</span>
+                      <span className="text-xs text-slate-500 font-medium">Max:</span>
                       <input
                         type="number"
                         min="0.5"
                         step="0.5"
                         value={crit.maxMarks}
                         onChange={(e) => updateRubricCriterion(idx, 'maxMarks', e.target.value)}
-                        className="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-400 font-bold focus:outline-none focus:border-indigo-500 font-mono"
+                        className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-indigo-600 font-bold focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 font-mono"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => removeRubricCriterion(idx)}
-                      className="text-slate-500 hover:text-rose-400 p-1"
+                      className="text-slate-400 hover:text-rose-600 p-1"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -709,7 +709,7 @@ const QuestionBank = () => {
                     placeholder="Description / Expectation for full credit..."
                     value={crit.description}
                     onChange={(e) => updateRubricCriterion(idx, 'description', e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                   />
 
                   <input
@@ -717,7 +717,7 @@ const QuestionBank = () => {
                     placeholder="Reference Keywords (comma-separated, e.g. semaphore, mutex, deadlock)"
                     value={(crit.keywords || []).join(', ')}
                     onChange={(e) => updateRubricCriterion(idx, 'keywords', e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-400 font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-600 font-mono placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20"
                   />
                 </div>
               ))}
@@ -728,7 +728,7 @@ const QuestionBank = () => {
             </Button>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
@@ -748,38 +748,38 @@ const QuestionBank = () => {
       >
         {previewQuestion && (
           <div className="space-y-4 text-xs">
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
               <div>
-                <span className="font-bold text-white text-sm block mb-0.5">{previewQuestion.questionText}</span>
-                <span className="text-slate-400">
-                  <strong className="text-indigo-400">{previewQuestion.subject}</strong> • {previewQuestion.unit} • {previewQuestion.topic}
+                <span className="font-bold text-slate-900 text-sm block mb-0.5">{previewQuestion.questionText}</span>
+                <span className="text-slate-500">
+                  <strong className="text-indigo-600 font-semibold">{previewQuestion.subject}</strong> • {previewQuestion.unit} • {previewQuestion.topic}
                 </span>
               </div>
               <Badge status={previewQuestion.difficulty}>{previewQuestion.marks} Marks</Badge>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-              <strong className="text-slate-300 block mb-1">Expected Reference Solution:</strong>
-              <p className="text-slate-400 leading-relaxed font-mono">{previewQuestion.expectedAnswer}</p>
+            <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200">
+              <strong className="text-slate-700 block mb-1">Expected Reference Solution:</strong>
+              <p className="text-slate-600 leading-relaxed font-mono">{previewQuestion.expectedAnswer}</p>
             </div>
 
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-2">
+              <h5 className="font-bold text-slate-900 uppercase tracking-wider mb-2">
                 Marking Rubric Criteria ({previewQuestion.rubric?.criteria?.length || 0})
               </h5>
               <div className="space-y-2">
                 {previewQuestion.rubric?.criteria?.map((crit, i) => (
-                  <div key={i} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex justify-between items-start">
+                  <div key={i} className="p-3 rounded-xl bg-white border border-slate-200 flex justify-between items-start shadow-xs">
                     <div>
-                      <p className="font-semibold text-slate-200">{crit.name}</p>
-                      <p className="text-slate-400 text-[11px] mt-0.5">{crit.description}</p>
+                      <p className="font-semibold text-slate-900">{crit.name}</p>
+                      <p className="text-slate-500 text-[11px] mt-0.5">{crit.description}</p>
                       {crit.keywords?.length > 0 && (
-                        <p className="text-indigo-400 text-[10px] mt-1 font-mono">
+                        <p className="text-indigo-600 text-[10px] mt-1 font-mono font-medium">
                           Keywords: {crit.keywords.join(', ')}
                         </p>
                       )}
                     </div>
-                    <span className="font-mono font-bold text-indigo-400 shrink-0 ml-3">
+                    <span className="font-mono font-bold text-indigo-600 shrink-0 ml-3">
                       {crit.maxMarks}m
                     </span>
                   </div>

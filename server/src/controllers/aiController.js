@@ -27,11 +27,17 @@ exports.generatePaperFromSyllabus = async (req, res, next) => {
     }
 
     // Retrieve saved syllabus strictly from existing system
-    const syllabus = await Syllabus.findOne({ examination: examinationId });
+    let syllabus = await Syllabus.findOne({ examination: examinationId });
+    if (!syllabus && exam.assignedSyllabus) {
+      syllabus = await Syllabus.findById(exam.assignedSyllabus);
+    }
+    if (!syllabus) {
+      const assignment = await MarksBlueprint.findOne({ examination: examinationId });
+    }
     if (!syllabus || !Array.isArray(syllabus.units) || syllabus.units.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No syllabus found for this examination. Please add and save the syllabus first before generating a paper with AI.'
+        message: 'No syllabus found for this examination. Please ensure Admin has assigned a syllabus first before generating a paper with AI.'
       });
     }
 

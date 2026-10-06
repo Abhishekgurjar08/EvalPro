@@ -119,6 +119,11 @@ const examinationSchema = new mongoose.Schema(
       ref: 'User',
       default: null
     },
+    assignedSyllabus: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Syllabus',
+      default: null
+    },
     setterAssignmentDate: {
       type: Date
     },

@@ -17,6 +17,7 @@ router
   .delete(authorize('ADMIN'), examController.deleteExamination);
 
 router.post('/:id/assign-setter', authorize('ADMIN'), examController.assignSetter);
+router.post('/:id/assign-syllabus', authorize('ADMIN'), examController.assignSyllabus);
 router.post('/:id/setter-response', authorize('EXAM_SETTER'), examController.setterResponse);
 
 module.exports = router;

@@ -5,7 +5,8 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
+router.get('/', syllabusController.getSyllabi);
 router.get('/exam/:examId', syllabusController.getSyllabusByExam);
-router.post('/', authorize('ADMIN', 'EXAM_SETTER'), syllabusController.createOrUpdateSyllabus);
+router.post('/', authorize('ADMIN'), syllabusController.createOrUpdateSyllabus);
 
 module.exports = router;

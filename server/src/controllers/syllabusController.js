@@ -1,16 +1,59 @@
 const Syllabus = require('../models/Syllabus');
 const Examination = require('../models/Examination');
+const ExamSetterAssignment = require('../models/ExamSetterAssignment');
 const { logAudit } = require('../services/auditService');
+
+exports.getSyllabi = async (req, res, next) => {
+  try {
+    const { subject } = req.query;
+    const query = {};
+    if (subject) query.subject = { $regex: subject, $options: 'i' };
+
+    const syllabi = await Syllabus.find(query)
+      .populate('examination', 'name code subject')
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: syllabi.length,
+      syllabi
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 exports.getSyllabusByExam = async (req, res, next) => {
   try {
     const { examId } = req.params;
-    let syllabus = await Syllabus.findOne({ examination: examId }).populate('createdBy', 'name email');
+    const exam = await Examination.findById(examId).populate('assignedSyllabus');
+    if (!exam) return res.status(404).json({ success: false, message: 'Examination not found' });
+
+    let syllabus = null;
+
+    // 1. Direct assigned syllabus on examination
+    if (exam.assignedSyllabus) {
+      syllabus = await Syllabus.findById(exam.assignedSyllabus).populate('createdBy', 'name email');
+    }
+
+    // 2. Syllabus linked by examination field
     if (!syllabus) {
-      // Find examination to check if exam exists
-      const exam = await Examination.findById(examId);
-      if (!exam) return res.status(404).json({ success: false, message: 'Examination not found' });
-      return res.status(200).json({ success: true, syllabus: null, message: 'No syllabus created yet for this exam.' });
+      syllabus = await Syllabus.findOne({ examination: examId }).populate('createdBy', 'name email');
+    }
+
+    // 3. Fallback: check latest assignment record
+    if (!syllabus) {
+      const assignment = await ExamSetterAssignment.findOne({ examination: examId, syllabus: { $ne: null } })
+        .sort({ createdAt: -1 })
+        .populate('syllabus');
+      if (assignment && assignment.syllabus) {
+        syllabus = assignment.syllabus;
+      }
+    }
+
+    if (!syllabus) {
+      return res.status(200).json({ success: true, syllabus: null, message: 'No syllabus assigned yet for this exam.' });
     }
     res.status(200).json({ success: true, syllabus });
   } catch (error) {
@@ -56,6 +99,11 @@ exports.createOrUpdateSyllabus = async (req, res, next) => {
         units: normalizedUnits,
         createdBy: req.user._id
       });
+    }
+
+    // Ensure examination has assignedSyllabus set
+    if (examinationId) {
+      await Examination.findByIdAndUpdate(examinationId, { assignedSyllabus: syllabus._id });
     }
 
     await logAudit({

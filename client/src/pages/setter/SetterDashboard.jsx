@@ -100,22 +100,22 @@ const SetterDashboard = () => {
     <div>
       <PageHeader
         title="Exam Setter Authoring Center"
-        subtitle="Curate examination syllabi, author rubric-grounded question banks, construct marks blueprints, and submit question papers."
+        subtitle="Review assigned syllabi, author rubric-grounded question banks, construct marks blueprints, and submit question papers."
         breadcrumb="Content Architecture"
       />
 
       {/* Pending Assignment Alert */}
       {pendingAcceptance.length > 0 && (
-        <div className="mb-8 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mb-8 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+            <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-700">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">
+              <p className="text-sm font-bold text-slate-900">
                 You have {pendingAcceptance.length} examination assignment(s) awaiting your formal response!
               </p>
-              <p className="text-xs text-indigo-300">
+              <p className="text-xs text-slate-600">
                 Please review the subject, duration, and marks requirements to accept or decline with reason.
               </p>
             </div>
@@ -163,77 +163,77 @@ const SetterDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Link
           to="/setter/examinations"
-          className="surface-card p-4 rounded-xl border border-slate-800 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/90 group"
+          className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/80 group"
         >
-          <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-indigo-400 mb-1">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-indigo-600 mb-1">
             <span>Step 1</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h4 className="text-xs font-semibold text-slate-100">My Examinations</h4>
-          <p className="text-[11px] text-slate-400 mt-1">Accept assignments and inspect parameters.</p>
+          <h4 className="text-xs font-bold text-slate-900">My Examinations</h4>
+          <p className="text-[11px] text-slate-500 mt-1">Accept assignments and inspect parameters.</p>
         </Link>
 
         <Link
           to="/setter/questions"
-          className="surface-card p-4 rounded-xl border border-slate-800 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/90 group"
+          className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/80 group"
         >
-          <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-sky-400 mb-1">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-sky-600 mb-1">
             <span>Step 2</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h4 className="text-xs font-semibold text-slate-100">Question Bank & Rubrics</h4>
-          <p className="text-[11px] text-slate-400 mt-1">Author descriptive questions & criteria rubrics.</p>
+          <h4 className="text-xs font-bold text-slate-900">Question Bank & Rubrics</h4>
+          <p className="text-[11px] text-slate-500 mt-1">Author descriptive questions & criteria rubrics.</p>
         </Link>
 
         <Link
           to={assignedExams.length > 0 ? `/setter/syllabus/${assignedExams[0]._id}` : '/setter/examinations'}
-          className="surface-card p-4 rounded-xl border border-slate-800 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/90 group"
+          className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/80 group"
         >
-          <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-emerald-400 mb-1">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">
             <span>Step 3</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h4 className="text-xs font-semibold text-slate-100">Syllabus & Paper Scheme</h4>
-          <p className="text-[11px] text-slate-400 mt-1">Define units, paper scheme, and marks distribution.</p>
+          <h4 className="text-xs font-bold text-slate-900">Paper Scheme</h4>
+          <p className="text-[11px] text-slate-500 mt-1">Configure paper scheme, question patterns, and marks distribution.</p>
         </Link>
 
         <Link
           to="/setter/question-papers"
-          className="surface-card p-4 rounded-xl border border-slate-800 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/90 group"
+          className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50/80 group"
         >
-          <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-purple-400 mb-1">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-purple-600 mb-1">
             <span>Step 4</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <h4 className="text-xs font-semibold text-slate-100">Paper Builder & Submit</h4>
-          <p className="text-[11px] text-slate-400 mt-1">Select questions & submit for admin approval.</p>
+          <h4 className="text-xs font-bold text-slate-900">Paper Builder & Submit</h4>
+          <p className="text-[11px] text-slate-500 mt-1">Select questions & submit for admin approval.</p>
         </Link>
       </div>
 
       {/* Assigned Examinations List */}
-      <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-base font-bold text-white tracking-tight">Your Assigned Examinations</h3>
-          <span className="text-xs text-slate-400 font-mono">{assignedExams.length} Assigned</span>
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">Your Assigned Examinations</h3>
+          <span className="text-xs text-slate-500 font-mono font-medium">{assignedExams.length} Assigned</span>
         </div>
 
-        <div className="divide-y divide-slate-800/60">
+        <div className="divide-y divide-slate-100">
           {assignedExams.map((exam) => (
-            <div key={exam._id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div key={exam._id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
               <div>
                 <div className="flex items-center space-x-2.5">
-                  <h4 className="text-base font-bold text-white">{exam.name}</h4>
+                  <h4 className="text-base font-bold text-slate-900">{exam.name}</h4>
                   <Badge status={exam.status}>{exam.status.replace('_', ' ')}</Badge>
                 </div>
-                <div className="flex items-center space-x-3 text-xs text-slate-400 mt-1.5">
-                  <span className="font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-slate-300">
+                <div className="flex items-center space-x-3 text-xs text-slate-500 mt-1.5">
+                  <span className="font-mono bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 text-slate-700">
                     {exam.code}
                   </span>
-                  <span>Subject: <strong className="text-indigo-400">{exam.subject}</strong></span>
+                  <span>Subject: <strong className="text-indigo-600 font-semibold">{exam.subject}</strong></span>
                   <span>•</span>
-                  <span>Course: <strong className="text-slate-300">{exam.course} (Sem {exam.semester})</strong></span>
+                  <span>Course: <strong className="text-slate-800">{exam.course} (Sem {exam.semester})</strong></span>
                   <span>•</span>
-                  <span>Max Marks: <strong className="text-white font-mono">{exam.maxMarks}</strong></span>
+                  <span>Max Marks: <strong className="text-slate-900 font-mono">{exam.maxMarks}</strong></span>
                 </div>
               </div>
 
@@ -267,15 +267,16 @@ const SetterDashboard = () => {
                   </>
                 )}
 
+                {/* Two options: Paper Scheme and Question Bank */}
                 <Link to={`/setter/syllabus/${exam._id}`}>
-                  <Button size="sm" variant="outline">
-                    Syllabus & Paper Scheme
+                  <Button size="sm" variant="primary" icon={Layers}>
+                    Paper Scheme
                   </Button>
                 </Link>
 
-                <Link to="/setter/question-papers">
-                  <Button size="sm" variant="primary">
-                    Question Paper
+                <Link to={`/setter/questions?subject=${encodeURIComponent(exam.subject || '')}`}>
+                  <Button size="sm" variant="outline" icon={BookOpen}>
+                    Question Bank
                   </Button>
                 </Link>
               </div>
@@ -291,25 +292,25 @@ const SetterDashboard = () => {
         title={`Respond to Setter Assignment - ${selectedExam?.name}`}
       >
         <form onSubmit={handleSetterResponse} className="space-y-4">
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
-            <p className="text-slate-300">
-              Subject: <strong className="text-indigo-400">{selectedExam?.subject}</strong>
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+            <p className="text-slate-700">
+              Subject: <strong className="text-indigo-600">{selectedExam?.subject}</strong>
             </p>
-            <p className="text-slate-400">
-              Exam Code: <span className="font-mono text-white">{selectedExam?.code}</span> | Max Marks: {selectedExam?.maxMarks}
+            <p className="text-slate-500">
+              Exam Code: <span className="font-mono text-slate-900 font-bold">{selectedExam?.code}</span> | Max Marks: {selectedExam?.maxMarks}
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2">Your Decision</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">Your Decision</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setResponseType('ACCEPT')}
-                className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                className={`p-3.5 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
                   responseType === 'ACCEPT'
-                    ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/10'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -319,10 +320,10 @@ const SetterDashboard = () => {
               <button
                 type="button"
                 onClick={() => setResponseType('REJECT')}
-                className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                className={`p-3.5 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
                   responseType === 'REJECT'
-                    ? 'bg-rose-600/20 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/10'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <XCircle className="w-4 h-4" />
@@ -333,7 +334,7 @@ const SetterDashboard = () => {
 
           {responseType === 'REJECT' && (
             <div>
-              <label className="block text-xs font-semibold text-rose-300 mb-1">
+              <label className="block text-xs font-semibold text-rose-700 mb-1">
                 Decline Reason (Mandatory) *
               </label>
               <textarea
@@ -342,12 +343,12 @@ const SetterDashboard = () => {
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Please state the administrative or subject-matter reason for declining this setter assignment..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500"
+                className="w-full bg-white border border-rose-300 rounded-xl p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20"
               />
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200">
             <Button variant="ghost" onClick={() => setResponseModalOpen(false)}>
               Cancel
             </Button>

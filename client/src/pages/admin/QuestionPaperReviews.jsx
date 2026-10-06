@@ -116,24 +116,24 @@ const QuestionPaperReviews = () => {
           {papers.map((paper) => (
             <div
               key={paper._id}
-              className="surface-card p-5 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div>
                 <div className="flex items-center space-x-2.5">
-                  <h4 className="text-base font-bold text-white tracking-tight">{paper.paperTitle}</h4>
+                  <h4 className="text-base font-bold text-slate-900 tracking-tight">{paper.paperTitle}</h4>
                   <Badge status={paper.status}>{paper.status}</Badge>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1.5">
-                  <span>Exam: <strong className="text-slate-200">{paper.examination?.name}</strong></span>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5">
+                  <span>Exam: <strong className="text-slate-800">{paper.examination?.name}</strong></span>
                   <span>•</span>
-                  <span>Subject: <strong className="text-indigo-400">{paper.examination?.subject}</strong></span>
+                  <span>Subject: <strong className="text-indigo-600 font-semibold">{paper.examination?.subject}</strong></span>
                   <span>•</span>
-                  <span>Total Marks: <strong className="text-white font-mono">{paper.totalMarks}</strong></span>
+                  <span>Total Marks: <strong className="text-slate-900 font-mono font-bold">{paper.totalMarks}</strong></span>
                   <span>•</span>
-                  <span>Questions: <strong className="text-white font-mono">{paper.questions?.length || 0}</strong></span>
+                  <span>Questions: <strong className="text-slate-900 font-mono font-bold">{paper.questions?.length || 0}</strong></span>
                 </div>
                 {paper.rejectionReason && (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                     <strong>Previous Rejection Notes:</strong> {paper.rejectionReason}
                   </div>
                 )}
@@ -189,21 +189,21 @@ const QuestionPaperReviews = () => {
         {previewPaper && (
           <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
             {/* Header Details */}
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs flex justify-between items-center">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs flex justify-between items-center">
               <div>
-                <p className="text-slate-400">Subject: <span className="text-white font-semibold">{previewPaper.examination?.subject}</span></p>
-                <p className="text-slate-400">Exam: <span className="text-white font-semibold">{previewPaper.examination?.name}</span></p>
+                <p className="text-slate-500">Subject: <span className="text-slate-900 font-semibold">{previewPaper.examination?.subject}</span></p>
+                <p className="text-slate-500">Exam: <span className="text-slate-900 font-semibold">{previewPaper.examination?.name}</span></p>
               </div>
               <div className="text-right">
-                <p className="text-slate-400">Total Marks: <span className="text-indigo-400 font-mono font-bold text-sm">{previewPaper.totalMarks}</span></p>
+                <p className="text-slate-500">Total Marks: <span className="text-indigo-600 font-mono font-bold text-sm">{previewPaper.totalMarks}</span></p>
                 <Badge status={previewPaper.status}>{previewPaper.status}</Badge>
               </div>
             </div>
 
             {/* Instructions */}
-            <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
-              <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Instructions</h5>
-              <ul className="list-disc list-inside text-xs text-slate-400 space-y-1">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Instructions</h5>
+              <ul className="list-disc list-inside text-xs text-slate-600 space-y-1">
                 {previewPaper.instructions?.map((ins, i) => (
                   <li key={i}>{ins}</li>
                 ))}
@@ -212,39 +212,39 @@ const QuestionPaperReviews = () => {
 
             {/* Questions List */}
             <div className="space-y-4">
-              <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Paper Questions ({previewPaper.questions?.length || 0})
               </h5>
               {previewPaper.questions?.map((item, idx) => (
-                <div key={idx} className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs space-y-2">
+                <div key={idx} className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs text-xs space-y-2">
                   <div className="flex justify-between items-start">
-                    <span className="font-bold text-white text-sm">
+                    <span className="font-bold text-slate-900 text-sm">
                       Q{item.questionNumber || idx + 1}. {item.question?.questionText || 'Question Text'}
                     </span>
-                    <span className="px-2 py-0.5 rounded font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0 ml-3">
+                    <span className="px-2 py-0.5 rounded font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0 ml-3">
                       {item.marks} Marks
                     </span>
                   </div>
 
                   {item.question?.expectedAnswer && (
-                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400">
-                      <strong className="text-slate-300 block mb-0.5">Reference / Expected Answer:</strong>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600">
+                      <strong className="text-slate-800 block mb-0.5 font-semibold">Reference / Expected Answer:</strong>
                       <p className="leading-relaxed">{item.question.expectedAnswer}</p>
                     </div>
                   )}
 
                   {/* Rubric Criteria if any */}
                   {item.question?.rubric?.criteria && item.question.rubric.criteria.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-800/80">
+                    <div className="mt-2 pt-2 border-t border-slate-100">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
                         Defined Marking Rubric:
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {item.question.rubric.criteria.map((crit, cIdx) => (
-                          <div key={cIdx} className="p-2 rounded bg-slate-950/60 border border-slate-800/80">
-                            <div className="flex justify-between font-semibold text-slate-300">
+                          <div key={cIdx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                            <div className="flex justify-between font-semibold text-slate-800">
                               <span>{crit.name}</span>
-                              <span className="font-mono text-indigo-400">{crit.maxMarks}m</span>
+                              <span className="font-mono text-indigo-600 font-bold">{crit.maxMarks}m</span>
                             </div>
                             <p className="text-[11px] text-slate-500 mt-0.5">{crit.description}</p>
                           </div>
@@ -258,7 +258,7 @@ const QuestionPaperReviews = () => {
 
             {/* Approval / Rejection Actions inside modal */}
             {previewPaper.status === 'SUBMITTED' && (
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
                 <Button
                   variant="danger"
                   onClick={() => {
@@ -289,12 +289,12 @@ const QuestionPaperReviews = () => {
         title="Reject Question Paper - Provide Revision Reason"
       >
         <form onSubmit={handleRejectSubmit} className="space-y-4">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             A detailed revision reason is mandatory. The exam setter will be notified and requested to update the paper.
           </p>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Rejection Reason & Required Modifications *
             </label>
             <textarea
@@ -303,11 +303,11 @@ const QuestionPaperReviews = () => {
               value={rejectionComments}
               onChange={(e) => setRejectionComments(e.target.value)}
               placeholder="e.g. Unit 3 question distribution does not match blueprint. Please replace Q4 with a question covering TCP congestion control."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:border-rose-600"
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
             <Button variant="ghost" onClick={() => setRejectModalOpen(false)}>
               Cancel
             </Button>

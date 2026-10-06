@@ -53,10 +53,10 @@ const MyAttempts = () => {
           }
         />
       ) : (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Examination</th>
                   <th className="py-3.5 px-4">Subject</th>
@@ -66,18 +66,18 @@ const MyAttempts = () => {
                   <th className="py-3.5 px-4 text-right">Result</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {attempts.map((att) => (
-                  <tr key={att._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-4 font-semibold text-white">
+                  <tr key={att._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-4 font-semibold text-slate-900">
                       <div>{att.examination?.name}</div>
-                      <span className="text-[10px] text-slate-500 font-mono">{att.examination?.code}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{att.examination?.code}</span>
                     </td>
-                    <td className="py-4 px-4 text-slate-300">{att.examination?.subject}</td>
-                    <td className="py-4 px-4 font-mono font-bold text-indigo-400">
+                    <td className="py-4 px-4 text-slate-700">{att.examination?.subject}</td>
+                    <td className="py-4 px-4 font-mono font-bold text-indigo-600">
                       {att.copy?.copyId || '—'}
                     </td>
-                    <td className="py-4 px-4 font-mono text-slate-400 text-[11px]">
+                    <td className="py-4 px-4 font-mono text-slate-500 text-[11px]">
                       {att.submittedAt ? new Date(att.submittedAt).toLocaleString() : 'In Progress'}
                     </td>
                     <td className="py-4 px-4">
@@ -95,7 +95,7 @@ const MyAttempts = () => {
                           </Button>
                         </Link>
                       ) : (
-                        <span className="text-slate-500 italic text-xs">Evaluation in progress</span>
+                        <span className="text-slate-400 italic text-xs">Evaluation in progress</span>
                       )}
                     </td>
                   </tr>

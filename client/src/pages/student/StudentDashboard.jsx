@@ -77,38 +77,38 @@ const StudentDashboard = () => {
       </div>
 
       {/* Available Examinations Section */}
-      <div className="surface-card rounded-xl border border-slate-800 overflow-hidden mb-8">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h3 className="text-sm font-semibold text-slate-100 tracking-tight">Available Examinations</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Examinations open for online testing</p>
+            <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Available Examinations</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Examinations open for online testing</p>
           </div>
-          <Link to="/student/exams" className="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+          <Link to="/student/exams" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
             View All Examinations →
           </Link>
         </div>
 
         {upcomingOrAvailable.length === 0 ? (
-          <div className="p-10 text-center text-xs text-slate-400">
+          <div className="p-10 text-center text-xs text-slate-500">
             No active examinations scheduled at this time. All attempted exams are listed under My Attempts.
           </div>
         ) : (
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-slate-100">
             {upcomingOrAvailable.map((exam) => (
-              <div key={exam._id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div key={exam._id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
                 <div>
                   <div className="flex items-center space-x-2.5">
-                    <h4 className="text-base font-bold text-white">{exam.name}</h4>
-                    <span className="font-mono text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-indigo-400 font-bold">
+                    <h4 className="text-base font-bold text-slate-900">{exam.name}</h4>
+                    <span className="font-mono text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-indigo-700 font-bold">
                       {exam.code}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-3 text-xs text-slate-400 mt-1">
-                    <span>Subject: <strong className="text-white">{exam.subject}</strong></span>
+                  <div className="flex items-center space-x-3 text-xs text-slate-500 mt-1">
+                    <span>Subject: <strong className="text-slate-800">{exam.subject}</strong></span>
                     <span>•</span>
-                    <span>Duration: <strong className="text-slate-300 font-mono">{exam.durationMinutes} mins</strong></span>
+                    <span>Duration: <strong className="text-slate-700 font-mono">{exam.durationMinutes} mins</strong></span>
                     <span>•</span>
-                    <span>Max Marks: <strong className="text-white font-mono">{exam.maxMarks}</strong></span>
+                    <span>Max Marks: <strong className="text-slate-900 font-mono">{exam.maxMarks}</strong></span>
                   </div>
                 </div>
 
@@ -125,27 +125,27 @@ const StudentDashboard = () => {
 
       {/* Published Results Section */}
       {results.length > 0 && (
-        <div className="surface-card rounded-xl border border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
-              <h3 className="text-sm font-semibold text-slate-100 tracking-tight">Published Exam Results</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Official grades authorized by the examination board</p>
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Published Exam Results</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Official grades authorized by the examination board</p>
             </div>
-            <Link to="/student/results" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+            <Link to="/student/results" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
               View Detailed Marksheets →
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-slate-100">
             {results.map((res) => (
-              <div key={res._id} className="p-4 flex items-center justify-between text-xs">
+              <div key={res._id} className="p-4 flex items-center justify-between text-xs hover:bg-slate-50/70 transition-colors">
                 <div>
-                  <p className="font-bold text-white text-sm">{res.examination?.name}</p>
-                  <p className="text-slate-400">{res.examination?.subject} ({res.examination?.code})</p>
+                  <p className="font-bold text-slate-900 text-sm">{res.examination?.name}</p>
+                  <p className="text-slate-500">{res.examination?.subject} ({res.examination?.code})</p>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <span className="font-mono font-bold text-base text-emerald-400">
+                    <span className="font-mono font-bold text-base text-emerald-600">
                       {res.totalMarks} / {res.maxMarks}
                     </span>
                     <span className="text-[10px] text-slate-400 block font-mono">

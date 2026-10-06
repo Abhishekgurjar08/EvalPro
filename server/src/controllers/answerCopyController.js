@@ -7,6 +7,7 @@ const QuestionRubric = require('../models/QuestionRubric');
 const Examination = require('../models/Examination');
 const QuestionPaper = require('../models/QuestionPaper');
 const User = require('../models/User');
+const Annotation = require('../models/Annotation');
 const { logAudit } = require('../services/auditService');
 const { createNotification } = require('../services/notificationService');
 const aiEvaluationService = require('../services/aiEvaluationService');
@@ -15,11 +16,16 @@ const { calculateAndSaveResult } = require('../services/resultService');
 exports.getAnswerCopies = async (req, res, next) => {
   try {
     const examFilterId = req.query.examinationId || req.query.examination;
-    const { status, assigned, search, page = 1, limit = 200 } = req.query;
+    const { status, assigned, search, page = 1, limit = 200, excludeFinalized } = req.query;
     const query = {};
 
     if (examFilterId) query.examination = examFilterId;
-    if (status) query.status = status;
+    if (status) {
+      query.status = status;
+    } else if (excludeFinalized === 'true') {
+      query.evaluationStatus = { $nin: ['FINALIZED', 'ADMIN_REVIEWED', 'COMPLETED', 'REVIEWED'] };
+      query.status = { $nin: ['FINALIZED', 'COMPLETED', 'REVIEWED'] };
+    }
 
     if (assigned === 'true') {
       query.assignedEvaluator = { $ne: null };
@@ -100,10 +106,16 @@ exports.getAnswerCopyById = async (req, res, next) => {
     // Check if an existing draft/final evaluation exists for this copy
     const existingEvaluation = await Evaluation.findOne({ answerCopy: copy._id }).populate('evaluator', 'name');
 
+    // Retrieve saved annotations for this answer copy
+    const annotations = await Annotation.find({ answerCopy: copy._id })
+      .populate('evaluator', 'name email')
+      .sort({ pageNumber: 1, createdAt: 1 });
+
     res.status(200).json({
       success: true,
       answerCopy: copy,
-      existingEvaluation
+      existingEvaluation,
+      annotations
     });
   } catch (error) {
     next(error);

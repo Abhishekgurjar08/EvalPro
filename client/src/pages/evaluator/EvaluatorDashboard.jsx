@@ -90,44 +90,44 @@ const EvaluatorDashboard = () => {
       </div>
 
       {/* Active Evaluation Queue */}
-      <div className="surface-card rounded-xl border border-slate-800 overflow-hidden mb-8">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h3 className="text-sm font-semibold text-slate-100 tracking-tight">Active Evaluation Queue</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Active Evaluation Queue</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
               Answer copies requiring grading or draft continuation ({pendingOrInProgress.length} active)
             </p>
           </div>
-          <Link to="/evaluator/assigned-copies" className="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+          <Link to="/evaluator/assigned-copies" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
             View All Assigned Copies →
           </Link>
         </div>
 
         {pendingOrInProgress.length === 0 ? (
-          <div className="p-10 text-center text-xs text-slate-400">
+          <div className="p-10 text-center text-xs text-slate-500">
             All assigned copies have been evaluated! Check back when new examinations are assigned.
           </div>
         ) : (
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-slate-100">
             {pendingOrInProgress.slice(0, 5).map((copy) => (
               <div
                 key={copy._id}
-                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-800/30 transition-colors"
+                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors"
               >
                 <div className="flex items-center space-x-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 font-mono font-bold flex items-center justify-center text-xs border border-indigo-500/20 shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 font-mono font-bold flex items-center justify-center text-xs border border-indigo-100 shrink-0">
                     {copy.copyId.slice(-4)}
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-white text-sm">{copy.copyId}</span>
+                      <span className="font-bold text-slate-900 text-sm">{copy.copyId}</span>
                       <Badge status={copy.evaluationStatus}>{copy.evaluationStatus}</Badge>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-indigo-300 border border-slate-800">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-200">
                         {copy.evaluationMode}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {copy.examination?.name} • <span className="text-indigo-400 font-semibold">{copy.subject}</span>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {copy.examination?.name} • <span className="text-indigo-600 font-semibold">{copy.subject}</span>
                     </p>
                   </div>
                 </div>

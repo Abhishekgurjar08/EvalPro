@@ -12,6 +12,11 @@ const examSetterAssignmentSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    syllabus: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Syllabus',
+      default: null
+    },
     status: {
       type: String,
       enum: ['PENDING', 'ACCEPTED', 'REJECTED'],

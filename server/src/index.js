@@ -21,6 +21,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const scannerRoutes = require('./routes/scannerRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const annotationRoutes = require('./routes/annotationRoutes');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/rubrics', rubricRoutes);
 app.use('/api/blueprints', blueprintRoutes);
 app.use('/api/question-papers', questionPaperRoutes);
 app.use('/api/answer-copies', answerCopyRoutes);
+app.use('/api/annotations', annotationRoutes);
 app.use('/api/evaluators', evaluatorRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/ai', aiRoutes);
