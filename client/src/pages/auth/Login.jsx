@@ -32,10 +32,6 @@ const Login = () => {
     }
   };
 
-  const populateRole = (demoEmail, demoPass) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6 lg:p-10 selection:bg-indigo-500/20 selection:text-indigo-900">
@@ -211,36 +207,7 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Quick Demo Role Selection Pills */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                <span>Quick Login (Demo Credentials)</span>
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => populateRole('admin@example.com', 'Admin@123')}
-                  className="px-2.5 py-2 rounded-xl bg-white hover:bg-indigo-50 hover:border-indigo-300 text-[11px] font-semibold text-slate-700 hover:text-indigo-700 transition-all text-center border border-slate-200 active:scale-95 shadow-xs"
-                >
-                  🛡️ Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => populateRole('setter@example.com', 'Setter@123')}
-                  className="px-2.5 py-2 rounded-xl bg-white hover:bg-indigo-50 hover:border-indigo-300 text-[11px] font-semibold text-slate-700 hover:text-indigo-700 transition-all text-center border border-slate-200 active:scale-95 shadow-xs"
-                >
-                  ✍️ Setter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => populateRole('evaluator@example.com', 'Evaluator@123')}
-                  className="px-2.5 py-2 rounded-xl bg-white hover:bg-indigo-50 hover:border-indigo-300 text-[11px] font-semibold text-slate-700 hover:text-indigo-700 transition-all text-center border border-slate-200 active:scale-95 shadow-xs"
-                >
-                  🔍 Evaluator
-                </button>
-              </div>
-            </div>
+
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
