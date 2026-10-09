@@ -1,4 +1,9 @@
 require('dotenv').config();
+
+// Fix Node.js DNS resolution for MongoDB Atlas SRV connection
+const dns = require('dns');
+dns.setServers(['1.1.1.1', '8.8.8.8']);
+
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -29,12 +34,50 @@ const app = express();
 connectDB();
 
 // Middlewares
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://eval-pro-five.vercel.app',
+  ...(process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(',').map((u) => u.trim().replace(/\/+$/, ''))
+    : [])
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        allowedOrigins.includes('*')
+      ) {
+        return callback(null, true);
+      }
+
+      try {
+        const hostname = new URL(origin).hostname;
+        if (hostname === 'eval-pro-five.vercel.app' || hostname.endsWith('.vercel.app')) {
+          return callback(null, true);
+        }
+      } catch (e) {
+        // Continue to fallback
+      }
+
+      // Allow request
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+);
+
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -67,12 +110,20 @@ app.use('/api/notifications', notificationRoutes);
 // Error Handling Middleware
 app.use(errorHandler);
 
+// Server
 const PORT = process.env.PORT || 5000;
+
 const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(
+    'Server running in ' +
+    (process.env.NODE_ENV || 'development') +
+    ' mode on port ' +
+    PORT
+  );
 });
 
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
+  console.error('Unhandled Rejection: ' + err.message);
   server.close(() => process.exit(1));
 });

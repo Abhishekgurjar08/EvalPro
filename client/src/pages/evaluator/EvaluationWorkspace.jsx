@@ -423,8 +423,12 @@ const EvaluationWorkspace = () => {
   const handleRetryQuestionAi = async (qId) => {
     try {
       setAiLoading((prev) => ({ ...prev, [qId]: true }));
+      const targetAnsItem = (copy.answers || []).find(
+        (a) => (a.question?._id || a.question)?.toString() === qId?.toString()
+      );
       const res = await api.post(`/answer-copies/${copy._id}/retry-question-ai`, {
-        questionId: qId
+        questionId: qId,
+        studentAnswer: targetAnsItem?.studentAnswer || ''
       });
       if (res.data.success) {
         showToast(res.data.message || 'Question re-evaluated successfully!', 'success');

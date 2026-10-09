@@ -7,6 +7,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 router.use(protect);
 
 router.get('/', answerCopyController.getAnswerCopies);
+router.get('/subject-stats', authorize('ADMIN'), answerCopyController.getSubjectWiseScannedStats);
 router.get('/my-assigned', authorize('EVALUATOR'), answerCopyController.getMyAssignedCopies);
 router.get('/:id', answerCopyController.getAnswerCopyById);
 

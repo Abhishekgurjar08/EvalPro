@@ -13,6 +13,7 @@ import ExaminationsList from '../pages/admin/ExaminationsList';
 import SetterManagement from '../pages/admin/SetterManagement';
 import EvaluatorManagement from '../pages/admin/EvaluatorManagement';
 import CopyAssignment from '../pages/admin/CopyAssignment';
+import ScannedCopiesOverview from '../pages/admin/ScannedCopiesOverview';
 import QuestionPaperReviews from '../pages/admin/QuestionPaperReviews';
 import AnswerCopiesList from '../pages/admin/AnswerCopiesList';
 import ScanAnswerCopies from '../pages/admin/ScanAnswerCopies';
@@ -70,6 +71,7 @@ const AppRoutes = () => {
           <Route path="/admin/examinations" element={<ExaminationsList />} />
           <Route path="/admin/setters" element={<SetterManagement />} />
           <Route path="/admin/evaluators" element={<EvaluatorManagement />} />
+          <Route path="/admin/scanned-copies" element={<ScannedCopiesOverview />} />
           <Route path="/admin/copy-assignment" element={<CopyAssignment />} />
           <Route path="/admin/examinations/:id/scan" element={<ScanAnswerCopies />} />
           <Route path="/admin/examinations/:id/scanned-copies" element={<ScanAnswerCopies />} />

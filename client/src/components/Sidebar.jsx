@@ -15,7 +15,8 @@ import {
   HelpCircle,
   Clock,
   Sparkles,
-  LogOut
+  LogOut,
+  Scan
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
@@ -43,6 +44,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       {
         title: 'Evaluation',
         items: [
+          { label: 'Scanned Copies', path: '/admin/scanned-copies', icon: Scan },
           { label: 'Copy Assignment', path: '/admin/copy-assignment', icon: FolderKanban, highlight: true },
           { label: 'Answer Copies', path: '/admin/answer-copies', icon: FileCheck },
           { label: 'Faculty Evaluators', path: '/admin/evaluators', icon: UserCheck }

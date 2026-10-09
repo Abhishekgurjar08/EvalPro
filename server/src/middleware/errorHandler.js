@@ -1,8 +1,13 @@
 const errorHandler = (err, req, res, next) => {
   console.error('API Error:', err);
 
-  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = err.statusCode || err.status || (res.statusCode === 200 ? 500 : res.statusCode);
   let message = err.message || 'Internal Server Error';
+
+  if (err.type === 'entity.too.large') {
+    statusCode = 413;
+    message = 'Uploaded file/payload is too large. Please upload smaller files or split them into batches.';
+  }
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
