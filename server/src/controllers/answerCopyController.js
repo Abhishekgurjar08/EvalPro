@@ -750,7 +750,8 @@ exports.uploadScannedCopies = async (req, res, next) => {
 
         let sAnswer = matchedExtract ? matchedExtract.studentAnswer : (copyData.studentAnswer || '');
         if (!sAnswer || sAnswer.trim() === '') {
-          sAnswer = getTranscribedAnswer(qObj, qNumber);
+          const pages = copyData.scannedDocument?.scannedPages || copyData.scannedPages;
+          sAnswer = extractAnswerFromScannedPages(pages, qNumber);
         }
 
         return {
@@ -877,6 +878,48 @@ exports.deleteAnswerCopy = async (req, res, next) => {
 };
 
 /**
+ * Helper to extract answer text for a specific question number from multi-page scanned OCR output
+ */
+function extractAnswerFromScannedPages(scannedPages, qNum) {
+  if (!Array.isArray(scannedPages) || scannedPages.length === 0) return '';
+
+  // Order pages by pageNumber ascending (Page 1, 2, 3...)
+  const sortedPages = [...scannedPages].sort((a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0));
+  const fullText = sortedPages.map((p) => p.ocrText || '').filter(Boolean).join('\n\n');
+  if (!fullText.trim()) return '';
+
+  // 1. Try matching Question block: "Q1: ...", "Question 1. ...", "Ans 1: ..."
+  const qRegex = new RegExp(
+    `(?:(?:Question|Q|Ans|Answer)\\.?\\s*${qNum}[:\\.\\-\\)\\s]+)([\\s\\S]*?)(?=(?:(?:Question|Q|Ans|Answer)\\.?\\s*\\d+[:\\.\\-\\)\\s]+)|$)`,
+    'i'
+  );
+
+  const match = fullText.match(qRegex);
+  if (match && match[1] && match[1].trim().length > 5) {
+    return match[1].trim();
+  }
+
+  // 2. Try per-page match
+  for (const p of sortedPages) {
+    if (p.ocrText) {
+      const pageMatch = p.ocrText.match(qRegex);
+      if (pageMatch && pageMatch[1] && pageMatch[1].trim().length > 5) {
+        return pageMatch[1].trim();
+      }
+    }
+  }
+
+  // 3. Fallback: check if page explicitly mentions Q{qNum}
+  for (const p of sortedPages) {
+    if (p.ocrText && (p.ocrText.includes(`Q${qNum}`) || p.ocrText.includes(`Question ${qNum}`) || p.ocrText.includes(`Ans ${qNum}`))) {
+      return p.ocrText.trim();
+    }
+  }
+
+  return '';
+}
+
+/**
  * Helper to evaluate all questions in a single copy using AI
  */
 async function processCopyAiEvaluation(copy) {
@@ -939,18 +982,12 @@ async function processCopyAiEvaluation(copy) {
     const qNum = ansItem.questionNumber;
     const maxM = Number(ansItem.maxMarks || q?.marks || 10);
 
-    // If studentAnswer is empty, extract/transcribe from question context or OCR
+    // If studentAnswer is empty, extract from multi-page OCR if available
     if (!ansItem.studentAnswer || ansItem.studentAnswer.trim() === '') {
-      let foundOcr = '';
-      if (Array.isArray(copy.scannedDocument?.scannedPages)) {
-        for (const p of copy.scannedDocument.scannedPages) {
-          if (p.ocrText && (p.ocrText.includes(`Q${qNum}`) || p.ocrText.includes(`Question ${qNum}`) || p.ocrText.includes(`Ans ${qNum}`))) {
-            foundOcr = p.ocrText;
-            break;
-          }
-        }
+      const extractedOcr = extractAnswerFromScannedPages(copy.scannedDocument?.scannedPages, qNum);
+      if (extractedOcr) {
+        ansItem.studentAnswer = extractedOcr;
       }
-      ansItem.studentAnswer = foundOcr || getTranscribedAnswer(q, qNum);
     }
 
     try {
@@ -1454,7 +1491,10 @@ exports.retryQuestionAi = async (req, res, next) => {
     if (studentAnswer !== undefined && studentAnswer !== null && studentAnswer.trim() !== '') {
       targetAns.studentAnswer = studentAnswer.trim();
     } else if (!targetAns.studentAnswer || targetAns.studentAnswer.trim() === '') {
-      targetAns.studentAnswer = getTranscribedAnswer(q, targetAns.questionNumber);
+      const extractedOcr = extractAnswerFromScannedPages(copy.scannedDocument?.scannedPages, targetAns.questionNumber);
+      if (extractedOcr) {
+        targetAns.studentAnswer = extractedOcr;
+      }
     }
 
     targetAns.evaluationStatus = 'PROCESSING';

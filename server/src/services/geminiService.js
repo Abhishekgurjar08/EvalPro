@@ -1265,7 +1265,148 @@ Return ONLY valid JSON matching this exact structure:
   }
 
   /**
-   * Fallback for Answer Evaluation
+   * FEATURE 2: AI Question-wise Answer Evaluation
+   * Evaluates student response against question text, reference answer, rubric criteria, and max marks.
+   * Supports multimodal scanned copy media (image/PDF) and text responses.
+   */
+  async evaluateQuestionAnswer({
+    questionText,
+    maxMarks = 10,
+    rubricCriteria = [],
+    expectedAnswer = '',
+    studentAnswer = '',
+    unit = '',
+    topic = '',
+    scannedMedia = null
+  }) {
+    const numMax = Number(maxMarks) || 10;
+    const cleanStudentAnswer = (studentAnswer || '').trim();
+
+    // If answer is empty and no scanned document media is attached
+    if (!cleanStudentAnswer && !scannedMedia) {
+      return this.evaluateFallback({
+        questionText,
+        maxMarks: numMax,
+        rubricCriteria,
+        expectedAnswer,
+        studentAnswer: '',
+        unit,
+        topic
+      });
+    }
+
+    if (!this.hasApiKey()) {
+      return this.evaluateFallback({
+        questionText,
+        maxMarks: numMax,
+        rubricCriteria,
+        expectedAnswer,
+        studentAnswer: cleanStudentAnswer,
+        unit,
+        topic
+      });
+    }
+
+    try {
+      const model = this.getModel();
+      const prompt = `You are a strict, fair, and expert academic university examiner evaluating an examination answer copy.
+Evaluate the student's answer for the following question strictly based on academic correctness, conceptual understanding, completeness, relevance, and the marking scheme.
+
+QUESTION DETAILS:
+- Subject / Unit: ${unit || 'Syllabus Topic'}
+- Topic: ${topic || 'Core Subject Concepts'}
+- Question Text: ${questionText}
+- Maximum Marks: ${numMax}
+- Expected Model Answer / Reference:
+${expectedAnswer || 'Standard model answer covering core principles, definitions, derivations, formulas, and domain applications.'}
+- Marking Rubric:
+${JSON.stringify(rubricCriteria || [], null, 2)}
+
+STUDENT'S SUBMITTED RESPONSE:
+${cleanStudentAnswer || '(Handwritten response provided in attached scanned booklet media)'}
+
+EVALUATION GUIDELINES:
+1. Academic Correctness & Understanding: Award marks based on evidence of correct principles, valid explanations, accurate equations/derivations, and technical depth.
+2. Partial Credit: Award fair partial credit for partially correct answers, steps, or explanations.
+3. Full Marks: If the answer satisfies the question requirements and demonstrates mastery, award full marks (or near full marks).
+4. Semantic Equivalence & Alternative Methods: Do NOT penalize or deduct marks simply because the student used different wording, phrasing, or an alternative scientifically valid formulation/derivation than the model answer.
+5. Minor Mistakes: Do not deduct marks for minor grammatical or spelling errors unless they alter technical meaning.
+6. Irrelevant / Incorrect: Do NOT award marks for completely incorrect, off-topic, or unsupported assertions.
+7. Range Constraint: "marks_awarded" must be a non-negative number between 0 and ${numMax}. It must never exceed ${numMax}.
+8. Criteria Distribution: Allocate marks across criteria so the sum of criteria marks equals "marks_awarded".
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "marks_awarded": number,
+  "maximum_marks": ${numMax},
+  "criteria": [
+    {
+      "criterion": "Criterion Name",
+      "marks_awarded": number,
+      "maximum_marks": number,
+      "reason": "Specific feedback for this criterion"
+    }
+  ],
+  "feedback": "Constructive question-specific evaluation feedback explaining awarded marks and any specific areas for improvement.",
+  "strengths": ["Key strength 1", "Key strength 2"],
+  "missing_points": ["Missing point 1 if applicable"],
+  "modelUsed": "gemini-model"
+}`;
+
+      const parts = [{ text: prompt }];
+      if (scannedMedia && scannedMedia.data) {
+        parts.push({
+          inlineData: {
+            mimeType: scannedMedia.mimeType || 'application/pdf',
+            data: scannedMedia.data
+          }
+        });
+      }
+
+      const result = await model.generateContent({ contents: [{ parts }] });
+      const response = await result.response;
+      const rawText = response.text();
+      const parsed = this.cleanAndParseJson(rawText);
+
+      const parsedScore = Number(parsed.marks_awarded ?? parsed.marksAwarded ?? parsed.suggestedMarks ?? 0);
+      const marksAwarded = Math.max(0, Math.min(numMax, isNaN(parsedScore) ? 0 : Math.round(parsedScore * 2) / 2));
+
+      const criteria = Array.isArray(parsed.criteria)
+        ? parsed.criteria.map((c) => ({
+            criterion: c.criterion || c.name || 'Criterion',
+            marks_awarded: Math.max(0, Math.min(Number(c.maximum_marks ?? c.maxMarks ?? 1), Number(c.marks_awarded ?? c.marksAwarded ?? 0))),
+            maximum_marks: Number(c.maximum_marks ?? c.maxMarks ?? 1),
+            reason: c.reason || c.feedback || ''
+          }))
+        : [];
+
+      return {
+        marks_awarded: marksAwarded,
+        maximum_marks: numMax,
+        criteria,
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : ['Relevant conceptual terminology applied'],
+        missing_points: Array.isArray(parsed.missing_points) ? parsed.missing_points : (Array.isArray(parsed.missingPoints) ? parsed.missingPoints : []),
+        errors: Array.isArray(parsed.errors) ? parsed.errors : [],
+        feedback: parsed.feedback || parsed.overallFeedback || 'Evaluated successfully against marking rubric.',
+        modelUsed: parsed.modelUsed || this.defaultModel || 'gemini-1.5-pro'
+      };
+    } catch (apiError) {
+      console.warn('Gemini API evaluation error, falling back to Semantic Rubric Engine:', apiError.message);
+      return this.evaluateFallback({
+        questionText,
+        maxMarks: numMax,
+        rubricCriteria,
+        expectedAnswer,
+        studentAnswer: cleanStudentAnswer,
+        unit,
+        topic
+      });
+    }
+  }
+
+  /**
+   * Semantic Rubric Engine Fallback for Answer Evaluation
+   * Evaluates student answers against academic concepts, technical depth, equations, and rubric criteria.
    */
   evaluateFallback({
     questionText,
@@ -1276,90 +1417,235 @@ Return ONLY valid JSON matching this exact structure:
     unit = '',
     topic = ''
   }) {
-    const sAns = (studentAnswer || '').trim().toLowerCase();
-    const rAns = (expectedAnswer || '').trim().toLowerCase();
     const numMax = Number(maxMarks) || 10;
+    const sAnsRaw = (studentAnswer || '').trim();
 
-    if (!sAns) {
+    // 1. If student answer is completely empty
+    if (!sAnsRaw) {
+      const emptyCriteria = (rubricCriteria && rubricCriteria.length > 0
+        ? rubricCriteria
+        : [
+            { name: 'Conceptual Understanding & Definitions', maxMarks: Math.round(numMax * 0.4 * 2) / 2 },
+            { name: 'Technical Depth & Derivations', maxMarks: Math.round(numMax * 0.4 * 2) / 2 },
+            { name: 'Completeness & Application', maxMarks: Math.max(0.5, Math.round((numMax - Math.round(numMax * 0.4 * 2)) * 2) / 2) }
+          ]
+      ).map((c) => ({
+        criterion: c.name || c.criterion || 'Criterion',
+        marks: 0,
+        marksAwarded: 0,
+        marks_awarded: 0,
+        maxMarks: Number(c.maxMarks || c.maximum_marks || 1),
+        maximum_marks: Number(c.maxMarks || c.maximum_marks || 1),
+        reason: 'No response submitted for this question.',
+        feedback: 'No response submitted for this question.'
+      }));
+
       return {
         marks_awarded: 0,
+        suggestedMarks: 0,
         maximum_marks: numMax,
-        criteria: (rubricCriteria || []).map((c) => ({
-          criterion: c.name || c.criterion || 'Criterion',
-          marks_awarded: 0,
-          maximum_marks: Number(c.maxMarks || c.maximum_marks || 1),
-          reason: 'No response submitted.'
-        })),
+        maxMarks: numMax,
+        criteria: emptyCriteria,
+        criteriaEvaluation: emptyCriteria,
         strengths: [],
-        missing_points: ['No answer submitted by student.'],
+        missing_points: ['Question was not attempted or no legible response was detected in the booklet.'],
         errors: [],
-        feedback: 'No answer provided. Zero marks awarded.',
-        modelUsed: 'gemini-academic-rubric-engine'
+        feedback: 'No answer submitted for this question. Zero marks awarded.',
+        overallFeedback: 'No answer submitted for this question. Zero marks awarded.',
+        modelUsed: 'semantic-rubric-engine'
       };
     }
 
-    const defaultCriteria = rubricCriteria && rubricCriteria.length > 0
-      ? rubricCriteria
-      : [
-          { name: 'Conceptual Understanding', maxMarks: Math.ceil(numMax * 0.4), keywords: [] },
-          { name: 'Technical Accuracy & Explanation', maxMarks: Math.floor(numMax * 0.4), keywords: [] },
-          { name: 'Examples / Structure', maxMarks: Math.max(1, Math.floor(numMax * 0.2)), keywords: [] }
-        ];
+    const sAns = sAnsRaw.toLowerCase();
+    const sWords = sAns.split(/\s+/).filter((w) => w.length > 2);
+    const wordCount = sWords.length;
 
-    let totalEarned = 0;
-    const evaluatedCriteria = [];
-    const refWords = new Set(
-      rAns.replace(/[^\w\s]/g, '').split(/\s+/).filter((w) => w.length > 3)
-    );
+    // Filter words: common English stop words + question boilerplate + syllabus meta-words
+    const filterWords = new Set([
+      'the', 'is', 'at', 'which', 'on', 'a', 'an', 'this', 'that', 'with', 'from', 'have', 'has', 'had',
+      'for', 'and', 'nor', 'but', 'or', 'yet', 'so', 'in', 'into', 'to', 'of', 'by', 'as', 'are', 'was',
+      'were', 'be', 'been', 'being', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+      'such', 'no', 'not', 'only', 'own', 'same', 'than', 'too', 'very', 'can', 'will', 'just', 'should',
+      'now', 'these', 'those', 'whose', 'whom', 'what', 'where', 'when', 'how', 'why',
+      'explain', 'describe', 'discuss', 'critically', 'analyze', 'evaluate', 'compare', 'contrast', 'state', 'define',
+      'comprehensive', 'theoretical', 'breakdown', 'architectural', 'alignment', 'domain', 'specifications',
+      'practical', 'implementation', 'criteria', 'analytical', 'evaluation', 'metrics', 'scoring', 'rationale',
+      'detailed', 'candidate', 'explanation', 'addressing', 'principles', 'foundations', 'mathematical',
+      'derivations', 'applications', 'considerations', 'tradeoffs', 'trade', 'offs', 'lifecycle', 'constraints',
+      'associated', 'patterns', 'ensure', 'correctness', 'maintainability', 'operational', 'structural', 'relevant',
+      'provide', 'detail', 'diagram', 'diagrams', 'illustrate', 'examples', 'component', 'components', 'system',
+      'approach', 'methodology', 'overview', 'introduction'
+    ]);
 
-    for (const crit of defaultCriteria) {
-      const cMax = Number(crit.maxMarks || crit.maximum_marks) || 1;
-      const critName = crit.name || crit.criterion || 'Criterion';
-      const keywords = Array.isArray(crit.keywords) ? crit.keywords : [];
+    // Extract core domain concepts from question, topic, unit, and reference answer
+    const qKeywords = (questionText || '').toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 4 && !filterWords.has(w));
+    const topicKeywords = `${topic || ''} ${unit || ''}`.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 4 && !filterWords.has(w));
+    const refKeywords = (expectedAnswer || '').toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 4 && !filterWords.has(w));
+    const domainTerms = Array.from(new Set([...qKeywords, ...topicKeywords, ...refKeywords]));
 
-      let matched = 0;
-      for (const kw of keywords) {
-        if (sAns.includes(String(kw).toLowerCase())) matched++;
+    let matchedDomainCount = 0;
+    const matchedTerms = [];
+    for (const term of domainTerms) {
+      if (sAns.includes(term)) {
+        matchedDomainCount++;
+        matchedTerms.push(term);
+      }
+    }
+
+    // Detect presence of formulas, mathematical notation, symbols, or equations
+    const hasMath = /[=λψ∇ℏωπεμναβγ+\-*/^√∫±²³∝·]/.test(sAnsRaw) ||
+      /\b(?:vp|vg|e\s*=\s*|p\s*=\s*|h\s*\/\s*|psi|omega|delta|lambda|sin|cos|tan|exp|log|lim|dt|dx|curl|div|apf|hkl)\b/i.test(sAns);
+
+    // Check relevance: If domain terms exist, but student has 0 match and no math, and wrote words
+    if (domainTerms.length > 0 && matchedDomainCount === 0 && !hasMath) {
+      const zeroCriteria = (rubricCriteria && rubricCriteria.length > 0 ? rubricCriteria : [
+        { name: 'Conceptual Understanding', maxMarks: Math.ceil(numMax * 0.4) },
+        { name: 'Technical Accuracy & Explanation', maxMarks: Math.floor(numMax * 0.4) },
+        { name: 'Examples / Structure', maxMarks: Math.max(1, Math.floor(numMax * 0.2)) }
+      ]).map((c) => ({
+        criterion: c.name || c.criterion || 'Criterion',
+        marks: 0,
+        marksAwarded: 0,
+        marks_awarded: 0,
+        maxMarks: Number(c.maxMarks || c.maximum_marks || 1),
+        maximum_marks: Number(c.maxMarks || c.maximum_marks || 1),
+        feedback: 'The response does not address the required topic or question principles.',
+        reason: 'The response does not address the required topic or question principles.'
+      }));
+
+      return {
+        marks_awarded: 0,
+        suggestedMarks: 0,
+        maximum_marks: numMax,
+        maxMarks: numMax,
+        criteria: zeroCriteria,
+        criteriaEvaluation: zeroCriteria,
+        strengths: [],
+        missing_points: ['Response is off-topic or irrelevant to the question.'],
+        errors: ['Unrelated response submitted.'],
+        feedback: 'Response is off-topic and fails to address the question requirements. Zero marks awarded.',
+        overallFeedback: 'Response is off-topic and fails to address the question requirements. Zero marks awarded.',
+        modelUsed: 'semantic-rubric-engine'
+      };
+    }
+
+    // Calculate domain relevance and depth ratio
+    const targetTermsCount = Math.min(domainTerms.length, 5);
+    const domainRatio = targetTermsCount > 0 ? Math.min(1.0, matchedDomainCount / targetTermsCount) : 0.5;
+
+    let baseScore = domainRatio * 0.45;
+    if (matchedTerms.length >= 4) baseScore += 0.25;
+    else if (matchedTerms.length >= 2) baseScore += 0.15;
+    else if (matchedTerms.length >= 1) baseScore += 0.08;
+
+    if (hasMath) baseScore += 0.15;
+
+    // Length and completeness weighting
+    if (wordCount >= 70 && domainRatio >= 0.6) {
+      baseScore += 0.18; // Comprehensive, deep answer
+    } else if (wordCount >= 40 && domainRatio >= 0.4) {
+      baseScore += 0.10; // Competent, detailed
+    } else if (wordCount < 12) {
+      baseScore = Math.min(baseScore, 0.25); // Very brief sentence
+    } else if (wordCount < 25) {
+      baseScore = Math.min(baseScore, 0.45); // Brief response
+    }
+
+    const qualityRatio = Math.max(0, Math.min(1.0, baseScore));
+    const earnedMarks = Math.max(0, Math.min(numMax, Math.round(numMax * qualityRatio * 2) / 2));
+
+    // Build criteria with exact total sum === numMax
+    let criteriaDefs = [];
+    if (rubricCriteria && Array.isArray(rubricCriteria) && rubricCriteria.length > 0) {
+      criteriaDefs = rubricCriteria.map((c) => ({
+        name: c.name || c.criterion || 'Criterion',
+        maxMarks: Number(c.maxMarks || c.maximum_marks || 1)
+      }));
+    } else {
+      const c1M = Math.round(numMax * 0.4 * 2) / 2;
+      const c2M = Math.round(numMax * 0.4 * 2) / 2;
+      const c3M = Math.max(0.5, Math.round((numMax - c1M - c2M) * 2) / 2);
+      criteriaDefs = [
+        { name: 'Conceptual Understanding & Definitions', maxMarks: c1M },
+        { name: 'Technical Accuracy & Principles', maxMarks: c2M },
+        { name: 'Formulas, Derivations & Application', maxMarks: c3M }
+      ];
+    }
+
+    // Distribute earned marks proportionally across criteria
+    let remainingEarned = earnedMarks;
+    const criteriaEvaluation = [];
+    for (let idx = 0; idx < criteriaDefs.length; idx++) {
+      const cDef = criteriaDefs[idx];
+      const isLast = idx === criteriaDefs.length - 1;
+      let cScore = 0;
+      if (isLast) {
+        cScore = Math.min(cDef.maxMarks, Math.max(0, remainingEarned));
+      } else {
+        const cRatio = cDef.maxMarks / numMax;
+        cScore = Math.min(cDef.maxMarks, Math.max(0, Math.round(earnedMarks * cRatio * 2) / 2));
+        remainingEarned = Math.max(0, remainingEarned - cScore);
       }
 
-      let wordOverlap = 0;
-      for (const rw of refWords) {
-        if (sAns.includes(rw)) wordOverlap++;
+      const cPercent = (cScore / cDef.maxMarks) * 100;
+      let reason = '';
+      if (cPercent >= 85) {
+        reason = `Strong demonstration of ${cDef.name}. Technical concepts and vocabulary align with standard curriculum.`;
+      } else if (cPercent >= 60) {
+        reason = `Satisfactory coverage of ${cDef.name}. Basic principles present, but secondary derivations or nuances can be improved.`;
+      } else if (cPercent > 0) {
+        reason = `Partial coverage of ${cDef.name}. Essential formulas or detailed explanations are missing.`;
+      } else {
+        reason = `Insufficient coverage of ${cDef.name}.`;
       }
 
-      let ratio = 0.5;
-      if (keywords.length > 0) {
-        ratio = Math.min(1, matched / Math.max(1, keywords.length));
-      } else if (refWords.size > 0) {
-        ratio = Math.min(1, wordOverlap / Math.max(3, Math.min(10, refWords.size)));
-      }
-
-      if (sAns.length > 150) ratio = Math.min(1, ratio + 0.2);
-      const criterionScore = Math.min(cMax, Math.round(cMax * ratio * 2) / 2);
-      totalEarned += criterionScore;
-
-      evaluatedCriteria.push({
-        criterion: critName,
-        marks_awarded: criterionScore,
-        maximum_marks: cMax,
-        reason: criterionScore >= cMax * 0.7
-          ? `Strong demonstration of ${critName}.`
-          : `Partial coverage of ${critName}; key details need elaboration.`
+      criteriaEvaluation.push({
+        criterion: cDef.name,
+        marks: cScore,
+        marksAwarded: cScore,
+        marks_awarded: cScore,
+        maxMarks: cDef.maxMarks,
+        maximum_marks: cDef.maxMarks,
+        feedback: reason,
+        reason
       });
     }
 
-    const finalMarks = Math.min(numMax, Math.round(totalEarned * 2) / 2);
+    const percentTotal = (earnedMarks / numMax) * 100;
+    let feedback = '';
+    const strengths = [];
+    const missingPoints = [];
+
+    if (percentTotal >= 85) {
+      feedback = 'Comprehensive and technically sound explanation. Demonstrates clear subject mastery, accurate principles, and appropriate equations.';
+      strengths.push('Thorough conceptual explanation', 'Accurate scientific terminology', 'Well-structured response');
+    } else if (percentTotal >= 65) {
+      feedback = `Good answer demonstrating solid understanding of ${topic || 'the topic'}. Covers main ideas well, with minor omissions in analytical derivation.`;
+      strengths.push('Solid conceptual grasp', 'Appropriate technical context');
+      missingPoints.push('Could include more mathematical steps or specific boundary conditions.');
+    } else if (percentTotal >= 40) {
+      feedback = 'Partially correct answer addressing basic concepts. Lacks deeper technical explanation, derivations, or supporting equations.';
+      strengths.push('Familiarity with foundational terms');
+      missingPoints.push('Omitted core derivations and formulas', 'Incomplete technical depth');
+    } else {
+      feedback = 'Brief or superficial response. Mentions introductory points but lacks substantive theoretical and analytical development.';
+      strengths.push('Introductory terminology mentioned');
+      missingPoints.push('Lacks detailed explanations, equations, and proper academic structure.');
+    }
+
     return {
-      marks_awarded: finalMarks,
+      marks_awarded: earnedMarks,
+      suggestedMarks: earnedMarks,
       maximum_marks: numMax,
-      criteria: evaluatedCriteria,
-      strengths: ['Relevant conceptual terminology applied', 'Appropriate technical context'],
-      missing_points: finalMarks < numMax ? ['Could provide deeper architectural diagrams or quantitative trade-offs'] : [],
+      maxMarks: numMax,
+      criteria: criteriaEvaluation,
+      criteriaEvaluation,
+      strengths,
+      missing_points: missingPoints,
       errors: [],
-      feedback: finalMarks >= numMax * 0.7
-        ? 'Well-structured response meeting academic rubric standards.'
-        : 'Satisfactory answer with partial understanding; requires further depth on core components.',
-      modelUsed: 'gemini-academic-rubric-engine'
+      feedback,
+      overallFeedback: feedback,
+      modelUsed: 'semantic-rubric-engine'
     };
   }
 }

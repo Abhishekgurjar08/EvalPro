@@ -288,7 +288,9 @@ exports.approveAiEvaluation = async (req, res, next) => {
           studentAnswer: ansItem.studentAnswer || '',
           referenceAnswer: q?.expectedAnswer || '',
           maxMarks: maxM,
-          rubricCriteria: q?.rubric ? q.rubric.criteria : []
+          rubricCriteria: q?.rubric ? q.rubric.criteria : [],
+          unit: q?.unit || '',
+          topic: q?.topic || ''
         });
 
         suggestedMarks = aiRes.suggestedMarks;
